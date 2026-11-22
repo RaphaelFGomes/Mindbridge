@@ -142,5 +142,6 @@ apps/api/                 Fastify REST API
 - This is a **personal, public** repo. Never use data from the owner's
   employer (internal names, tickets, hostnames) in fixtures or examples —
   fictional data only.
-- Never `git push`; the owner pushes. Stop at local commits.
+- Never `git commit` or `git push`; the owner does both. Leave changes
+  uncommitted for review.
 - Repo content (code, docs, commits) in English.
