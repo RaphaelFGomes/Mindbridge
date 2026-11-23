@@ -1,7 +1,7 @@
 import type { FastifyPluginCallbackZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { isUniqueViolation } from '../../db/errors.js';
-import { conflict, notFound, problemSchema } from '../../errors.js';
+import { conflict, notFound, problemResponse } from '../../errors.js';
 import type { MemoryRepository } from './memory.repository.js';
 import {
   createMemoryBodySchema,
@@ -18,6 +18,10 @@ export interface MemoryRoutesOptions {
 }
 
 const tags = ['memories'];
+
+const invalid = problemResponse('The request is invalid');
+const missing = problemResponse('No memory with this id');
+const duplicate = problemResponse('A memory with this name already exists in the scope');
 
 async function rethrowConflict<T>(operation: () => Promise<T>, name: string | undefined) {
   try {
@@ -42,7 +46,7 @@ export const memoryRoutes: FastifyPluginCallbackZod<MemoryRoutesOptions> = (
         tags,
         summary: 'Create a memory',
         body: createMemoryBodySchema,
-        response: { 201: memorySchema, 400: problemSchema, 409: problemSchema },
+        response: { 201: memorySchema, 400: invalid, 409: duplicate },
       },
     },
     async (request, reply) => {
@@ -65,7 +69,7 @@ export const memoryRoutes: FastifyPluginCallbackZod<MemoryRoutesOptions> = (
         description:
           'Without `project`, lists every memory. With `project`, lists that project plus global memories unless `includeGlobal=false`.',
         querystring: listMemoriesQuerySchema,
-        response: { 200: memoryListSchema, 400: problemSchema },
+        response: { 200: memoryListSchema, 400: invalid },
       },
     },
     async (request) => {
@@ -86,7 +90,7 @@ export const memoryRoutes: FastifyPluginCallbackZod<MemoryRoutesOptions> = (
         tags,
         summary: 'Get a memory',
         params: memoryIdParamsSchema,
-        response: { 200: memorySchema, 400: problemSchema, 404: problemSchema },
+        response: { 200: memorySchema, 400: invalid, 404: missing },
       },
     },
     async (request) => {
@@ -106,9 +110,9 @@ export const memoryRoutes: FastifyPluginCallbackZod<MemoryRoutesOptions> = (
         body: updateMemoryBodySchema,
         response: {
           200: memorySchema,
-          400: problemSchema,
-          404: problemSchema,
-          409: problemSchema,
+          400: invalid,
+          404: missing,
+          409: duplicate,
         },
       },
     },
@@ -131,8 +135,8 @@ export const memoryRoutes: FastifyPluginCallbackZod<MemoryRoutesOptions> = (
         params: memoryIdParamsSchema,
         response: {
           204: z.undefined().describe('Memory deleted'),
-          400: problemSchema,
-          404: problemSchema,
+          400: invalid,
+          404: missing,
         },
       },
     },

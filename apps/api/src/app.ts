@@ -9,6 +9,7 @@ import {
 } from 'fastify-type-provider-zod';
 import type { Database } from './db/client.js';
 import { registerErrorHandling } from './errors.js';
+import { trackAllowedMethods } from './method-not-allowed.js';
 import { MemoryRepository } from './modules/memories/memory.repository.js';
 import { memoryRoutes } from './modules/memories/memory.routes.js';
 import { healthRoutes } from './routes/health.js';
@@ -20,11 +21,13 @@ export interface AppOptions {
 }
 
 export async function buildApp({ db, logger = false }: AppOptions) {
-  const app = Fastify({ logger }).withTypeProvider<ZodTypeProvider>();
+  // No implicit HEAD routes: the API serves exactly the methods it documents.
+  const app = Fastify({ logger, exposeHeadRoutes: false }).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   registerErrorHandling(app);
+  const registerMethodNotAllowed = trackAllowedMethods(app);
 
   await app.register(fastifySwagger, {
     openapi: {
@@ -47,6 +50,7 @@ export async function buildApp({ db, logger = false }: AppOptions) {
 
   await app.register(healthRoutes, { db });
   await app.register(memoryRoutes, { prefix: '/v1', repository: new MemoryRepository(db) });
+  registerMethodNotAllowed();
 
   return app;
 }

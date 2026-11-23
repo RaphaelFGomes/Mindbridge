@@ -22,6 +22,14 @@ export const problemSchema = z
   .describe('RFC 9457 problem details');
 
 export type Problem = z.infer<typeof problemSchema>;
+
+/** Route response entry for an error status, documented with its real media type. */
+export function problemResponse(description: string) {
+  return {
+    description,
+    content: { 'application/problem+json': { schema: problemSchema } },
+  };
+}
 export type FieldError = NonNullable<Problem['errors']>[number];
 
 /** An error that maps directly to an HTTP problem response. */

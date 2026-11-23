@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createMemoryBodySchema,
   listMemoriesQuerySchema,
   memoryNameSchema,
   projectKeySchema,
@@ -46,6 +47,28 @@ describe('projectKeySchema', () => {
   });
 });
 
+describe('createMemoryBodySchema text fields', () => {
+  const body = (description: string) => ({
+    type: 'feedback',
+    name: 'prefers-pnpm',
+    description,
+    content: 'The team uses pnpm.',
+  });
+
+  it('trims surrounding whitespace', () => {
+    expect(createMemoryBodySchema.parse(body('  Use pnpm  ')).description).toBe('Use pnpm');
+  });
+
+  it.each([
+    ['blank', '   '],
+    ['empty', ''],
+    ['containing NUL', 'Use\u0000pnpm'],
+    ['longer than 200 characters before trimming', ` ${'x'.repeat(200)}`],
+  ])('rejects a description that is %s', (_case, description) => {
+    expect(createMemoryBodySchema.safeParse(body(description)).success).toBe(false);
+  });
+});
+
 describe('updateMemoryBodySchema', () => {
   it('rejects an empty patch', () => {
     expect(updateMemoryBodySchema.safeParse({}).success).toBe(false);
@@ -79,12 +102,20 @@ describe('listMemoriesQuerySchema', () => {
     ).toMatchObject({ includeGlobal: false, limit: 5, offset: 10 });
   });
 
-  it.each([{ limit: '0' }, { limit: '101' }, { offset: '-1' }, { includeGlobal: 'maybe' }])(
-    'rejects %j',
-    (query) => {
-      expect(listMemoriesQuerySchema.safeParse(query).success).toBe(false);
-    },
-  );
+  it.each([
+    { limit: '0' },
+    { limit: '101' },
+    { offset: '-1' },
+    { includeGlobal: 'maybe' },
+    { includeGlobal: '1' },
+    { offset: '' },
+    { limit: ' 5' },
+    { limit: '1e2' },
+    { limit: '0x10' },
+    { limit: '1.5' },
+  ])('rejects %j', (query) => {
+    expect(listMemoriesQuerySchema.safeParse(query).success).toBe(false);
+  });
 });
 
 describe('toMemoryDto', () => {
