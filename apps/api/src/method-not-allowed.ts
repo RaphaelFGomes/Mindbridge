@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { problem } from './errors.js';
 
 /**
@@ -21,23 +21,29 @@ export function trackAllowedMethods(app: FastifyInstance): () => void {
   return () => {
     for (const [url, methods] of allowed) {
       const allow = [...methods].sort().join(', ');
+      const reject = async (request: FastifyRequest, reply: FastifyReply) => {
+        await reply
+          .code(405)
+          .header('allow', allow)
+          .type('application/problem+json')
+          .send(
+            problem(
+              405,
+              'METHOD_NOT_ALLOWED',
+              `${request.method} is not supported on ${url}. Allowed: ${allow}.`,
+            ),
+          );
+      };
+
       app.route({
         // Every method Fastify can route (incl. TRACE and QUERY) that the path doesn't declare.
         method: app.supportedMethods.filter((method) => !methods.has(method)),
         url,
         schema: { hide: true },
-        handler: (request, reply) =>
-          reply
-            .code(405)
-            .header('allow', allow)
-            .type('application/problem+json')
-            .send(
-              problem(
-                405,
-                'METHOD_NOT_ALLOWED',
-                `${request.method} is not supported on ${url}. Allowed: ${allow}.`,
-              ),
-            ),
+        // Answer in onRequest, before Fastify looks at the body: otherwise a QUERY
+        // without Content-Type or a malformed JSON body would get a 400 instead.
+        onRequest: reject,
+        handler: reject,
       });
     }
   };

@@ -72,6 +72,23 @@ describe('app (no database)', () => {
     }
   });
 
+  it.each([
+    ['QUERY without Content-Type', { method: 'QUERY', url: '/health' }],
+    [
+      'PUT with a malformed JSON body',
+      {
+        method: 'PUT',
+        url: '/v1/memories',
+        headers: { 'content-type': 'application/json' },
+        payload: '{"name": ',
+      },
+    ],
+  ] as const)('answers 405 before looking at the body (%s)', async (_case, request) => {
+    const response = await app.inject(request);
+    expect(response.statusCode).toBe(405);
+    expect(response.json()).toMatchObject({ code: 'METHOD_NOT_ALLOWED' });
+  });
+
   it('keeps 405 routes out of the OpenAPI document', async () => {
     const response = await app.inject({ method: 'GET', url: '/openapi.json' });
     const spec = response.json<{ paths: Record<string, object> }>();
