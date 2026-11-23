@@ -88,7 +88,7 @@ Errors use [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457)
 | ------------- | ---------------------------------------------------------- | ------- |
 | Unit          | Vitest (incl. HTTP-level tests via `app.inject`)           | ✅      |
 | Integration   | Vitest + Testcontainers (real Postgres, no DB mocks)       | ✅      |
-| API           | Playwright `request` + Schemathesis (OpenAPI-driven)       | Planned |
+| API           | Playwright `request` + Schemathesis (OpenAPI-driven)       | ✅      |
 | Contract      | Pact (Web ↔ API, CLI ↔ API)                                | Planned |
 | E2E + visual  | Playwright                                                 | Planned |
 | Accessibility | axe-core inside Playwright                                 | Planned |
@@ -100,7 +100,17 @@ Errors use [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457)
 ```bash
 pnpm test               # unit
 pnpm test:integration   # integration (needs Docker)
+pnpm db:up && pnpm test:api   # black-box API tests against the built server
 pnpm lint && pnpm typecheck && pnpm format:check
+```
+
+The API tests treat the published OpenAPI document as the oracle: every
+response in the Playwright suite is validated against `/openapi.json`
+(status, media type and body schema), and Schemathesis fuzzes every operation
+from the same document. To fuzz locally (needs Python + pipx, API running):
+
+```bash
+pipx run --spec schemathesis==4.34.0 schemathesis run http://127.0.0.1:4000/openapi.json --checks all
 ```
 
 CI also fails when the Drizzle schema changes without a matching migration.

@@ -92,17 +92,21 @@ apps/api/                 Fastify REST API
   src/**/*.test.ts        unit tests (no database)
   test/integration/       Testcontainers tests (real Postgres)
   drizzle/                generated SQL migrations — never edit by hand
+tests/api/                Black-box API tests (Playwright `request`)
+  support/contract.ts     OpenAPI oracle: every response checked against /openapi.json
+  fixtures.ts             per-test unique project key + auto-cleanup
 ```
 
-| Command                                              | What it does                                        |
-| ---------------------------------------------------- | --------------------------------------------------- |
-| `pnpm db:up`                                         | Start Postgres + pgvector (Docker Compose)          |
-| `pnpm db:migrate`                                    | Apply migrations (reads `apps/api/.env`)            |
-| `pnpm dev`                                           | API with reload on <http://127.0.0.1:4000>          |
-| `pnpm test`                                          | Unit tests                                          |
-| `pnpm test:integration`                              | Integration tests (needs Docker, starts its own DB) |
-| `pnpm lint` / `pnpm typecheck` / `pnpm format:check` | Static checks                                       |
-| `pnpm --filter @mindbridge/api db:generate`          | New migration after a schema change                 |
+| Command                                              | What it does                                                                                |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `pnpm db:up`                                         | Start Postgres + pgvector (Docker Compose)                                                  |
+| `pnpm db:migrate`                                    | Apply migrations (reads `apps/api/.env`)                                                    |
+| `pnpm dev`                                           | API with reload on <http://127.0.0.1:4000>                                                  |
+| `pnpm test`                                          | Unit tests                                                                                  |
+| `pnpm test:integration`                              | Integration tests (needs Docker, starts its own DB)                                         |
+| `pnpm test:api`                                      | Playwright API tests (needs `pnpm db:up`; starts the built API on :4010, or uses `API_URL`) |
+| `pnpm lint` / `pnpm typecheck` / `pnpm format:check` | Static checks                                                                               |
+| `pnpm --filter @mindbridge/api db:generate`          | New migration after a schema change                                                         |
 
 ## Conventions
 
@@ -112,14 +116,22 @@ apps/api/                 Fastify REST API
 - **Validation:** Zod schemas are the single source for request validation,
   response serialization and the OpenAPI document (`/openapi.json`, `/docs`).
 - **Errors:** RFC 9457 `application/problem+json` with a stable `code`
-  (`VALIDATION_ERROR`, `NOT_FOUND`, `CONFLICT`, `ROUTE_NOT_FOUND`, ...).
+  (`VALIDATION_ERROR`, `NOT_FOUND`, `CONFLICT`, `ROUTE_NOT_FOUND`,
+  `METHOD_NOT_ALLOWED`, ...). Error responses are documented with that media
+  type. Undeclared methods on a known path get 405 + `Allow`; no implicit HEAD.
+- **Spec = behaviour:** anything the API accepts or rejects must be visible in
+  the generated JSON Schema, because Schemathesis treats the spec as the
+  oracle. Zod `refine`/`transform` are invisible there, so mirror them
+  (`.meta({ minProperties })`, regex patterns, strict query integers).
 - **Memory scope:** `project` is a normalized git remote
   (`github.com/acme/widgets`) or `null` for global. `name` is kebab-case and
   unique per scope (`UNIQUE NULLS NOT DISTINCT`).
 - **Tests:** unit tests may use `app.inject` for anything answered before a
   query runs (validation, routing, OpenAPI). Anything touching data is an
   integration test against real Postgres — no DB mocks. Integration files run
-  sequentially and truncate between tests.
+  sequentially and truncate between tests. API tests (`tests/api`) are
+  black-box: HTTP only, never import from `apps/api`, isolate data with a
+  unique project key per test and run fully parallel.
 - **Supply chain:** dependency build scripts are denied by default
   (`allowBuilds` in `pnpm-workspace.yaml`); approve only with a reason.
 - **CI** fails if the Drizzle schema changed without a generated migration.
@@ -127,21 +139,27 @@ apps/api/                 Fastify REST API
 ## Current status
 
 - 2026-11-22: GitHub repo created (`RaphaelFGomes/Mindbridge`, public).
-- 2026-11-22: v0.1 scaffold done — monorepo, memories CRUD API, Postgres +
-  Drizzle migration, OpenAPI, 53 unit + 33 integration tests passing
-  locally, GitHub Actions CI (not yet run on GitHub).
+- 2026-11-22: v0.1 scaffold done and CI green on GitHub — monorepo,
+  memories CRUD API, Postgres + Drizzle migration, OpenAPI, unit +
+  Testcontainers integration tests. Dependabot enabled (TypeScript majors
+  ignored).
+- 2026-11-22: API test layer added — 26 Playwright black-box tests with an
+  OpenAPI contract oracle, Schemathesis 4.34 fuzzing in CI (pipx, no PR
+  comments), spec/behaviour gaps fixed (problem+json media type, PATCH
+  `minProperties`, blank/NUL text, strict query integers, 405 + `Allow`).
 - **Next steps (rest of v0.1):**
-  1. Push and confirm CI is green.
-  2. API tests: Playwright `request` against a running server + Schemathesis
-     fuzzing from `/openapi.json`.
-  3. Coverage (Vitest v8) + Codecov.
-  4. API key auth before anything is exposed remotely.
+  1. Push and confirm the new `api` CI job is green; triage any Schemathesis
+     findings.
+  2. Coverage (Vitest v8) + Codecov.
+  3. API key auth before anything is exposed remotely.
 
 ## Working rules
 
 - This is a **personal, public** repo. Never use data from the owner's
   employer (internal names, tickets, hostnames) in fixtures or examples —
   fictional data only.
-- Never `git commit` or `git push`; the owner does both. Leave changes
-  uncommitted for review.
+- Never `git commit`, `git push` or open pull requests; the owner does all
+  three. Leave changes uncommitted for review.
+- Ask the owner before adding automation that opens PRs, pushes or comments
+  on its own (Dependabot version updates, Renovate, bots, such workflows).
 - Repo content (code, docs, commits) in English.
