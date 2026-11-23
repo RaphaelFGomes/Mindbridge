@@ -143,15 +143,17 @@ tests/api/                Black-box API tests (Playwright `request`)
   memories CRUD API, Postgres + Drizzle migration, OpenAPI, unit +
   Testcontainers integration tests. Dependabot enabled (TypeScript majors
   ignored).
-- 2026-11-22: API test layer added — 26 Playwright black-box tests with an
-  OpenAPI contract oracle, Schemathesis 4.34 fuzzing in CI (pipx, no PR
-  comments), spec/behaviour gaps fixed (problem+json media type, PATCH
-  `minProperties`, blank/NUL text, strict query integers, 405 + `Allow`).
+- 2026-11-22: API test layer added and green in CI — 26 Playwright
+  black-box tests with an OpenAPI contract oracle, Schemathesis 4.34 fuzzing
+  (pipx, no PR comments). Spec/behaviour gaps fixed up front (problem+json
+  media type, PATCH `minProperties`, blank/NUL text, strict query integers,
+  405 + `Allow`). Schemathesis's first run found one real bug: QUERY without
+  `Content-Type` got 400 instead of 405 (fixed by answering 405 in
+  `onRequest`).
 - **Next steps (rest of v0.1):**
-  1. Push and confirm the new `api` CI job is green; triage any Schemathesis
-     findings.
-  2. Coverage (Vitest v8) + Codecov.
-  3. API key auth before anything is exposed remotely.
+  1. Coverage (Vitest v8) + a coverage service — ask the owner first: these
+     services post PR comments by default.
+  2. API key auth before anything is exposed remotely.
 
 ## Working rules
 
