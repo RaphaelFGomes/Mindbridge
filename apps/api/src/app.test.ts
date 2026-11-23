@@ -126,6 +126,31 @@ describe('app (no database)', () => {
     expect(response.headers['content-type']).toMatch(/^application\/problem\+json/);
   });
 
+  it('hides database failures behind a generic 500 problem', async () => {
+    // The lazy client hits a real refused connection on the first query.
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/memories',
+      payload: {
+        type: 'feedback',
+        name: 'prefers-pnpm',
+        description: 'Use pnpm',
+        content: 'The team uses pnpm.',
+      },
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(response.headers['content-type']).toMatch(/^application\/problem\+json/);
+    expect(response.json()).toEqual({
+      type: 'about:blank',
+      title: 'Internal Server Error',
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      detail: 'An unexpected error occurred.',
+    });
+    expect(response.body).not.toMatch(/ECONNREFUSED|127\.0\.0\.1|postgres/i);
+  });
+
   it('rejects a non-UUID id before querying', async () => {
     const response = await app.inject({ method: 'GET', url: '/v1/memories/not-a-uuid' });
     expect(response.statusCode).toBe(400);
