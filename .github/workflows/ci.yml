@@ -49,3 +49,64 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:integration
+
+  api:
+    name: API tests (Playwright + Schemathesis)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: mindbridge
+          POSTGRES_PASSWORD: mindbridge
+          POSTGRES_DB: mindbridge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mindbridge -d mindbridge"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      DATABASE_URL: postgres://mindbridge:mindbridge@localhost:5432/mindbridge
+      API_URL: http://127.0.0.1:4010
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @mindbridge/api build
+      - run: pnpm db:migrate
+      - name: Start the API
+        env:
+          HOST: 127.0.0.1
+          PORT: '4010'
+          NODE_ENV: test
+          LOG_LEVEL: info
+        run: |
+          nohup node apps/api/dist/server.js > api.log 2>&1 &
+          curl --silent --show-error --fail --retry 30 --retry-connrefused --retry-delay 1 "$API_URL/health"
+      - name: Playwright API tests (black-box, contract-checked)
+        run: pnpm test:api
+      - name: Schemathesis (OpenAPI-driven fuzzing)
+        if: ${{ !cancelled() }}
+        run: >-
+          pipx run --spec schemathesis==4.34.0 schemathesis run "$API_URL/openapi.json"
+          --checks all
+          --max-examples 50
+          --report junit,html
+          --report-dir reports/schemathesis
+      - name: Upload API test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: api-test-reports
+          path: |
+            tests/api/reports/
+            reports/schemathesis/
+            api.log
+          retention-days: 14
