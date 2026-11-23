@@ -1,6 +1,7 @@
 # Mindbridge
 
 [![CI](https://github.com/RaphaelFGomes/Mindbridge/actions/workflows/ci.yml/badge.svg)](https://github.com/RaphaelFGomes/Mindbridge/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/RaphaelFGomes/Mindbridge/graph/badge.svg)](https://codecov.io/gh/RaphaelFGomes/Mindbridge)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **Vendor-agnostic shared memory for AI assistants.** Save context, decisions and
@@ -100,6 +101,7 @@ Errors use [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457)
 ```bash
 pnpm test               # unit
 pnpm test:integration   # integration (needs Docker)
+pnpm test:coverage      # unit + integration with coverage (needs Docker)
 pnpm db:up && pnpm test:api   # black-box API tests against the built server
 pnpm lint && pnpm typecheck && pnpm format:check
 ```
@@ -112,6 +114,11 @@ from the same document. To fuzz locally (needs Python + pipx, API running):
 ```bash
 pipx run --spec schemathesis==4.34.0 schemathesis run http://127.0.0.1:4000/openapi.json --checks all
 ```
+
+Coverage is measured on unit + integration tests together and uploaded to
+[Codecov](https://codecov.io/gh/RaphaelFGomes/Mindbridge) (reporting only, no PR
+comments). The gate lives in [`vitest.config.ts`](apps/api/vitest.config.ts): CI
+fails when coverage drops below its thresholds.
 
 CI also fails when the Drizzle schema changes without a matching migration.
 

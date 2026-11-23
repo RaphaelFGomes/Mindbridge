@@ -105,6 +105,7 @@ tests/api/                Black-box API tests (Playwright `request`)
 | `pnpm test`                                          | Unit tests                                                                                  |
 | `pnpm test:integration`                              | Integration tests (needs Docker, starts its own DB)                                         |
 | `pnpm test:api`                                      | Playwright API tests (needs `pnpm db:up`; starts the built API on :4010, or uses `API_URL`) |
+| `pnpm test:coverage`                                 | Unit + integration with coverage + thresholds (needs Docker)                                |
 | `pnpm lint` / `pnpm typecheck` / `pnpm format:check` | Static checks                                                                               |
 | `pnpm --filter @mindbridge/api db:generate`          | New migration after a schema change                                                         |
 
@@ -134,6 +135,10 @@ tests/api/                Black-box API tests (Playwright `request`)
   unique project key per test and run fully parallel.
 - **Supply chain:** dependency build scripts are denied by default
   (`allowBuilds` in `pnpm-workspace.yaml`); approve only with a reason.
+- **Coverage:** the gate is `coverage.thresholds` in `apps/api/vitest.config.ts`
+  (unit + integration combined). Codecov is reporting only: uploaded via OIDC
+  (no token secret), `comment: false`, informational statuses. Raise the
+  thresholds when coverage goes up; never lower them to make CI pass.
 - **CI** fails if the Drizzle schema changed without a generated migration.
 
 ## Current status
@@ -150,10 +155,13 @@ tests/api/                Black-box API tests (Playwright `request`)
   405 + `Allow`). Schemathesis's first run found one real bug: QUERY without
   `Content-Type` got 400 instead of 405 (fixed by answering 405 in
   `onRequest`).
+- 2026-11-23: Coverage added — Vitest v8 on unit + integration combined
+  (98% statements, 90% branches, 100% functions, 98% lines), thresholds as a
+  ratchet, uploaded to Codecov via OIDC (no PR comments, informational
+  statuses). New tests: 500 problem without leaking DB details, migrations
+  re-runnable without data loss.
 - **Next steps (rest of v0.1):**
-  1. Coverage (Vitest v8) + a coverage service — ask the owner first: these
-     services post PR comments by default.
-  2. API key auth before anything is exposed remotely.
+  1. API key auth before anything is exposed remotely.
 
 ## Working rules
 
