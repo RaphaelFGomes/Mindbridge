@@ -21,6 +21,11 @@
       "cache": false,
       "persistent": true,
       "passThroughEnv": ["DATABASE_URL", "HOST", "PORT", "LOG_LEVEL"]
+    },
+    "test:api": {
+      "dependsOn": ["@mindbridge/api#build"],
+      "cache": false,
+      "passThroughEnv": ["API_URL", "DATABASE_URL", "CI"]
     }
   }
 }
