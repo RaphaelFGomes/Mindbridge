@@ -1,0 +1,19 @@
+# Codecov is reporting only (badge + history). The coverage gate lives in
+# apps/api/vitest.config.ts (thresholds), so CI fails locally and in Actions alike.
+comment: false # never comment on pull requests
+
+github_checks:
+  annotations: false # no line annotations on PR diffs
+
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
+
+# Vitest runs from apps/api, so lcov paths are relative to it.
+fixes:
+  - 'src/::apps/api/src/'

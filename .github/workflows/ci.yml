@@ -37,9 +37,12 @@ jobs:
           git diff --exit-code -- apps/api/drizzle
 
   integration:
-    name: Integration tests (Testcontainers + Postgres)
+    name: Integration tests + coverage (Testcontainers + Postgres)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write # OIDC upload to Codecov: no long-lived token stored
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -48,7 +51,18 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test:integration
+      # Unit + integration in one run, so coverage and its thresholds see both.
+      - run: pnpm test:coverage
+      - name: Upload coverage to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          use_oidc: true
+          files: apps/api/coverage/lcov.info
+          disable_search: true
+          flags: api
+          # Reporting must never break PR builds (e.g. Dependabot); a failed upload on main should.
+          fail_ci_if_error: ${{ github.event_name == 'push' }}
 
   api:
     name: API tests (Playwright + Schemathesis)

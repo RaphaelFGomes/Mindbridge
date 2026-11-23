@@ -17,6 +17,12 @@
       "cache": false,
       "passThroughEnv": ["DOCKER_*", "TESTCONTAINERS_*"]
     },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "outputs": ["coverage/**"],
+      "passThroughEnv": ["DOCKER_*", "TESTCONTAINERS_*"]
+    },
     "dev": {
       "cache": false,
       "persistent": true,
