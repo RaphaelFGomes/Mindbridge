@@ -2,6 +2,11 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    // Off on purpose: the on-disk module cache survived a `pnpm add` and kept
+    // serving a transform bound to a stale copy of Vitest, so one test file
+    // failed or passed depending on the environment. Determinism beats the
+    // sub-second cold-start gain here.
+    fsModuleCache: false,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
