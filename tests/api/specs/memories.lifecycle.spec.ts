@@ -5,7 +5,7 @@ test('a memory can be created, found, updated and deleted', async ({
   memories,
   memory,
   project,
-  request,
+  api,
 }) => {
   const input = memory({ type: 'project', content: 'Deploy freeze until the 2nd.' });
   let created!: Memory;
@@ -19,7 +19,7 @@ test('a memory can be created, found, updated and deleted', async ({
     // Location points at the new resource.
     const location = response.headers().location ?? '';
     expect(location).toBe(`/v1/memories/${created.id}`);
-    expect((await request.get(location)).status()).toBe(200);
+    expect((await api.get(location)).status()).toBe(200);
   });
 
   await test.step('read it back by id', async () => {

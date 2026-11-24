@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { test as base } from '@playwright/test';
+import { test as base, type APIRequestContext } from '@playwright/test';
 import { loadContract, type Contract } from './support/contract.js';
 import { MemoriesClient, type NewMemory } from './support/memories-client.js';
 
@@ -8,6 +8,8 @@ interface WorkerFixtures {
 }
 
 interface TestFixtures {
+  /** Like `request`, but authenticated with the test run's API key. */
+  api: APIRequestContext;
   memories: MemoriesClient;
   /** A project key no other test uses, so tests can run in parallel on one database. */
   project: string;
@@ -43,8 +45,24 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     }));
   },
 
-  memories: async ({ request, contract }, use) => {
-    const client = new MemoriesClient(request, contract);
+  api: async ({ playwright, baseURL }, use) => {
+    const key = process.env.MINDBRIDGE_API_KEY;
+    if (!key)
+      throw new Error('MINDBRIDGE_API_KEY is not set; global setup should have created one');
+
+    const api = await playwright.request.newContext({
+      baseURL,
+      extraHTTPHeaders: {
+        accept: 'application/json, application/problem+json',
+        authorization: `Bearer ${key}`,
+      },
+    });
+    await use(api);
+    await api.dispose();
+  },
+
+  memories: async ({ api, contract }, use) => {
+    const client = new MemoriesClient(api, contract);
     await use(client);
     await client.cleanup();
   },

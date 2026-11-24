@@ -31,7 +31,7 @@
     "test:api": {
       "dependsOn": ["@mindbridge/api#build"],
       "cache": false,
-      "passThroughEnv": ["API_URL", "DATABASE_URL", "CI"]
+      "passThroughEnv": ["API_URL", "DATABASE_URL", "CI", "MINDBRIDGE_API_KEY"]
     }
   }
 }

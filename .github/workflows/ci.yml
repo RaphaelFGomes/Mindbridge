@@ -95,6 +95,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @mindbridge/api build
       - run: pnpm db:migrate
+      - name: Create an API key for this run
+        working-directory: apps/api
+        run: |
+          key="$(node --import tsx src/scripts/keys.ts create --name ci-api-tests --quiet)"
+          echo "::add-mask::$key"
+          echo "MINDBRIDGE_API_KEY=$key" >> "$GITHUB_ENV"
       - name: Start the API
         env:
           HOST: 127.0.0.1
@@ -110,6 +116,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: >-
           pipx run --spec schemathesis==4.34.0 schemathesis run "$API_URL/openapi.json"
+          --header "Authorization: Bearer $MINDBRIDGE_API_KEY"
           --checks all
           --max-examples 50
           --report junit,html
