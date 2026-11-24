@@ -55,6 +55,7 @@ pnpm install
 pnpm db:up                         # Postgres + pgvector on localhost:5432
 cp apps/api/.env.example apps/api/.env
 pnpm db:migrate
+pnpm keys:create --name my-laptop  # prints an API key once: store it
 pnpm dev                           # API on http://127.0.0.1:4000
 ```
 
@@ -62,12 +63,34 @@ pnpm dev                           # API on http://127.0.0.1:4000
 - OpenAPI document: <http://127.0.0.1:4000/openapi.json>
 
 ```bash
+export MINDBRIDGE_API_KEY=mb_...   # from keys:create
+
 curl -s -X POST http://127.0.0.1:4000/v1/memories \
+  -H "authorization: Bearer $MINDBRIDGE_API_KEY" \
   -H 'content-type: application/json' \
   -d '{"project":"github.com/acme/widgets","type":"feedback","name":"prefers-pnpm","description":"Use pnpm, never npm","content":"The team standardized on pnpm workspaces."}'
 
-curl -s 'http://127.0.0.1:4000/v1/memories?project=github.com/acme/widgets'
+curl -s 'http://127.0.0.1:4000/v1/memories?project=github.com/acme/widgets' \
+  -H "authorization: Bearer $MINDBRIDGE_API_KEY"
 ```
+
+## Authentication
+
+Every `/v1` route requires `Authorization: Bearer <key>`; `/health`, `/docs` and
+`/openapi.json` are public. Create one key per assistant or machine, so each can
+be revoked on its own:
+
+```bash
+pnpm keys:create --name claude-code   # shown once
+pnpm keys:list                        # name, prefix, last used, status (never the key)
+pnpm keys:revoke claude-code          # effective immediately
+```
+
+Keys look like `mb_` + 43 base64url characters (256 random bits). The fixed
+prefix lets secret scanners spot leaked keys. Only a SHA-256 hash is stored: a
+fast hash is enough for high-entropy keys (bcrypt or argon2 exist to protect
+low-entropy passwords). Missing or invalid keys get a `401` with
+`WWW-Authenticate: Bearer` before any input is validated.
 
 ## API
 

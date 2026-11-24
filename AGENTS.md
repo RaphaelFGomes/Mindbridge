@@ -72,6 +72,8 @@ GitHub description:
    write concurrently (concurrency test scenarios).
 4. Observability: OpenTelemetry + Grafana.
 5. Browser extension for ChatGPT web / Claude.ai (later phase).
+6. Record which API key (i.e. which assistant) created or last changed each
+   memory — the auth layer already knows `request.apiKey`.
 
 ## Roadmap
 
@@ -97,17 +99,18 @@ tests/api/                Black-box API tests (Playwright `request`)
   fixtures.ts             per-test unique project key + auto-cleanup
 ```
 
-| Command                                              | What it does                                                                                |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `pnpm db:up`                                         | Start Postgres + pgvector (Docker Compose)                                                  |
-| `pnpm db:migrate`                                    | Apply migrations (reads `apps/api/.env`)                                                    |
-| `pnpm dev`                                           | API with reload on <http://127.0.0.1:4000>                                                  |
-| `pnpm test`                                          | Unit tests                                                                                  |
-| `pnpm test:integration`                              | Integration tests (needs Docker, starts its own DB)                                         |
-| `pnpm test:api`                                      | Playwright API tests (needs `pnpm db:up`; starts the built API on :4010, or uses `API_URL`) |
-| `pnpm test:coverage`                                 | Unit + integration with coverage + thresholds (needs Docker)                                |
-| `pnpm lint` / `pnpm typecheck` / `pnpm format:check` | Static checks                                                                               |
-| `pnpm --filter @mindbridge/api db:generate`          | New migration after a schema change                                                         |
+| Command                                                         | What it does                                                                                |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `pnpm db:up`                                                    | Start Postgres + pgvector (Docker Compose)                                                  |
+| `pnpm db:migrate`                                               | Apply migrations (reads `apps/api/.env`)                                                    |
+| `pnpm dev`                                                      | API with reload on <http://127.0.0.1:4000>                                                  |
+| `pnpm test`                                                     | Unit tests                                                                                  |
+| `pnpm test:integration`                                         | Integration tests (needs Docker, starts its own DB)                                         |
+| `pnpm test:api`                                                 | Playwright API tests (needs `pnpm db:up`; starts the built API on :4010, or uses `API_URL`) |
+| `pnpm test:coverage`                                            | Unit + integration with coverage + thresholds (needs Docker)                                |
+| `pnpm keys:create --name <n>` / `keys:list` / `keys:revoke <n>` | Manage API keys (plaintext shown once)                                                      |
+| `pnpm lint` / `pnpm typecheck` / `pnpm format:check`            | Static checks                                                                               |
+| `pnpm --filter @mindbridge/api db:generate`                     | New migration after a schema change                                                         |
 
 ## Conventions
 
@@ -135,6 +138,12 @@ tests/api/                Black-box API tests (Playwright `request`)
   unique project key per test and run fully parallel.
 - **Supply chain:** dependency build scripts are denied by default
   (`allowBuilds` in `pnpm-workspace.yaml`); approve only with a reason.
+- **Auth:** `/v1/*` requires `Authorization: Bearer mb_…`, checked in an
+  `onRequest` hook of the `/v1` scope (before validation). Keys live in
+  `api_keys` as SHA-256 hashes, one per assistant, revocable; `/health`,
+  `/docs`, `/openapi.json` stay public. Unit tests inject an in-memory
+  `ApiKeyStore`; integration tests use real keys (`ctx.inject` adds one);
+  API tests get a throwaway key from global setup (or `MINDBRIDGE_API_KEY`).
 - **Coverage:** the gate is `coverage.thresholds` in `apps/api/vitest.config.ts`
   (unit + integration combined). Codecov is reporting only: uploaded via OIDC
   (no token secret), `comment: false`, informational statuses. Raise the
@@ -160,8 +169,13 @@ tests/api/                Black-box API tests (Playwright `request`)
   ratchet, uploaded to Codecov via OIDC (no PR comments, informational
   statuses). New tests: 500 problem without leaking DB details, migrations
   re-runnable without data loss.
-- **Next steps (rest of v0.1):**
-  1. API key auth before anything is exposed remotely.
+- 2026-11-23: API key auth added — per-assistant keys hashed in Postgres,
+  CLI to create/list/revoke, 401 + `WWW-Authenticate` before validation,
+  bearer scheme documented in OpenAPI (Schemathesis now runs authenticated
+  and checks `ignored_auth`). This completes the v0.1 scope.
+- **Next steps:**
+  1. Push and confirm CI is green (first run with auth).
+  2. Start v0.2: local MCP server (stdio) for Claude Code and Copilot.
 
 ## Working rules
 
