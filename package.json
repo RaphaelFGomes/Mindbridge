@@ -23,7 +23,10 @@
     "format:check": "prettier --check .",
     "db:up": "docker compose up -d --wait postgres",
     "db:down": "docker compose down",
-    "db:migrate": "pnpm --filter @mindbridge/api db:migrate"
+    "db:migrate": "pnpm --filter @mindbridge/api db:migrate",
+    "keys:create": "pnpm --silent --filter @mindbridge/api keys create",
+    "keys:list": "pnpm --silent --filter @mindbridge/api keys list",
+    "keys:revoke": "pnpm --silent --filter @mindbridge/api keys revoke"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

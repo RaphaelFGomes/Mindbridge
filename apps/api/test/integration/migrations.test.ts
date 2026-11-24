@@ -16,7 +16,7 @@ describe('database migrations', () => {
 
   it('can be re-applied safely: a second run is a no-op that keeps existing data', async () => {
     // Global setup already migrated this database; deploys run migrate on every release.
-    const created = await ctx.app.inject({
+    const created = await ctx.inject({
       method: 'POST',
       url: '/v1/memories',
       payload: memoryInput(),
@@ -26,7 +26,7 @@ describe('database migrations', () => {
 
     await expect(runMigrations(ctx.db)).resolves.toBeUndefined();
 
-    const after = await ctx.app.inject({ method: 'GET', url: `/v1/memories/${id}` });
+    const after = await ctx.inject({ method: 'GET', url: `/v1/memories/${id}` });
     expect(after.statusCode).toBe(200);
   });
 });

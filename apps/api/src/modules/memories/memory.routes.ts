@@ -18,6 +18,9 @@ export interface MemoryRoutesOptions {
 }
 
 const tags = ['memories'];
+const security = [{ apiKey: [] }];
+
+const unauthenticated = problemResponse('Missing, malformed, unknown or revoked API key');
 
 const invalid = problemResponse('The request is invalid');
 const missing = problemResponse('No memory with this id');
@@ -44,9 +47,10 @@ export const memoryRoutes: FastifyPluginCallbackZod<MemoryRoutesOptions> = (
     {
       schema: {
         tags,
+        security,
         summary: 'Create a memory',
         body: createMemoryBodySchema,
-        response: { 201: memorySchema, 400: invalid, 409: duplicate },
+        response: { 201: memorySchema, 400: invalid, 401: unauthenticated, 409: duplicate },
       },
     },
     async (request, reply) => {
@@ -65,11 +69,12 @@ export const memoryRoutes: FastifyPluginCallbackZod<MemoryRoutesOptions> = (
     {
       schema: {
         tags,
+        security,
         summary: 'List memories',
         description:
           'Without `project`, lists every memory. With `project`, lists that project plus global memories unless `includeGlobal=false`.',
         querystring: listMemoriesQuerySchema,
-        response: { 200: memoryListSchema, 400: invalid },
+        response: { 200: memoryListSchema, 400: invalid, 401: unauthenticated },
       },
     },
     async (request) => {
@@ -88,9 +93,10 @@ export const memoryRoutes: FastifyPluginCallbackZod<MemoryRoutesOptions> = (
     {
       schema: {
         tags,
+        security,
         summary: 'Get a memory',
         params: memoryIdParamsSchema,
-        response: { 200: memorySchema, 400: invalid, 404: missing },
+        response: { 200: memorySchema, 400: invalid, 401: unauthenticated, 404: missing },
       },
     },
     async (request) => {
@@ -105,12 +111,14 @@ export const memoryRoutes: FastifyPluginCallbackZod<MemoryRoutesOptions> = (
     {
       schema: {
         tags,
+        security,
         summary: 'Update a memory',
         params: memoryIdParamsSchema,
         body: updateMemoryBodySchema,
         response: {
           200: memorySchema,
           400: invalid,
+          401: unauthenticated,
           404: missing,
           409: duplicate,
         },
@@ -131,11 +139,13 @@ export const memoryRoutes: FastifyPluginCallbackZod<MemoryRoutesOptions> = (
     {
       schema: {
         tags,
+        security,
         summary: 'Delete a memory',
         params: memoryIdParamsSchema,
         response: {
           204: z.undefined().describe('Memory deleted'),
           400: invalid,
+          401: unauthenticated,
           404: missing,
         },
       },

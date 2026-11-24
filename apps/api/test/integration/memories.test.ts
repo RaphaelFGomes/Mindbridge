@@ -15,7 +15,7 @@ describe('Memories API', () => {
   let ctx: TestContext;
 
   const create = (payload: unknown) =>
-    ctx.app.inject({ method: 'POST', url: '/v1/memories', payload: payload as object });
+    ctx.inject({ method: 'POST', url: '/v1/memories', payload: payload as object });
 
   const createOk = async (payload: object): Promise<Memory> => {
     const response = await create(payload);
@@ -24,7 +24,7 @@ describe('Memories API', () => {
   };
 
   const list = async (query = '') => {
-    const response = await ctx.app.inject({ method: 'GET', url: `/v1/memories${query}` });
+    const response = await ctx.inject({ method: 'GET', url: `/v1/memories${query}` });
     expect(response.statusCode).toBe(200);
     return memoryListSchema.parse(response.json());
   };
@@ -115,14 +115,14 @@ describe('Memories API', () => {
   describe('GET /v1/memories/:id', () => {
     it('returns the memory', async () => {
       const created = await createOk(memoryInput());
-      const response = await ctx.app.inject({ method: 'GET', url: `/v1/memories/${created.id}` });
+      const response = await ctx.inject({ method: 'GET', url: `/v1/memories/${created.id}` });
 
       expect(response.statusCode).toBe(200);
       expect(response.json()).toEqual(created);
     });
 
     it('returns 404 for an unknown id', async () => {
-      const response = await ctx.app.inject({ method: 'GET', url: `/v1/memories/${randomUUID()}` });
+      const response = await ctx.inject({ method: 'GET', url: `/v1/memories/${randomUUID()}` });
       expect(response.statusCode).toBe(404);
       expect(response.json()).toMatchObject({ code: 'NOT_FOUND' });
     });
@@ -182,7 +182,7 @@ describe('Memories API', () => {
     it.each(['?limit=0', '?limit=101', '?offset=-1', '?type=secret', '?includeGlobal=maybe'])(
       'returns 400 for %s',
       async (query) => {
-        const response = await ctx.app.inject({ method: 'GET', url: `/v1/memories${query}` });
+        const response = await ctx.inject({ method: 'GET', url: `/v1/memories${query}` });
         expect(response.statusCode).toBe(400);
       },
     );
@@ -190,7 +190,7 @@ describe('Memories API', () => {
 
   describe('PATCH /v1/memories/:id', () => {
     const patch = (id: string, payload: object) =>
-      ctx.app.inject({ method: 'PATCH', url: `/v1/memories/${id}`, payload });
+      ctx.inject({ method: 'PATCH', url: `/v1/memories/${id}`, payload });
 
     it('updates the given fields and bumps updatedAt', async () => {
       const created = await createOk(memoryInput());
@@ -231,19 +231,19 @@ describe('Memories API', () => {
     it('deletes the memory', async () => {
       const created = await createOk(memoryInput());
 
-      const response = await ctx.app.inject({
+      const response = await ctx.inject({
         method: 'DELETE',
         url: `/v1/memories/${created.id}`,
       });
       expect(response.statusCode).toBe(204);
       expect(response.body).toBe('');
 
-      const after = await ctx.app.inject({ method: 'GET', url: `/v1/memories/${created.id}` });
+      const after = await ctx.inject({ method: 'GET', url: `/v1/memories/${created.id}` });
       expect(after.statusCode).toBe(404);
     });
 
     it('returns 404 for an unknown id', async () => {
-      const response = await ctx.app.inject({
+      const response = await ctx.inject({
         method: 'DELETE',
         url: `/v1/memories/${randomUUID()}`,
       });

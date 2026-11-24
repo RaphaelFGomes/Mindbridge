@@ -1,17 +1,28 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp, type App } from './app.js';
 import { createDatabase } from './db/client.js';
+import { generateApiKey } from './modules/api-keys/api-key.js';
+import type { ApiKeyStore } from './modules/api-keys/api-key.repository.js';
+
+const VALID_KEY = generateApiKey();
+const auth = { authorization: `Bearer ${VALID_KEY}` };
+
+/** In-memory key store: API keys themselves are tested against Postgres in integration. */
+const apiKeys: ApiKeyStore = {
+  authenticate: (key) =>
+    Promise.resolve(key === VALID_KEY ? { id: 'key-id', name: 'unit-tests' } : null),
+};
 
 /**
- * HTTP-level unit tests: everything here is answered before any query runs
- * (routing, validation, OpenAPI), so the lazy DB client never connects.
+ * HTTP-level unit tests: everything here is answered before a memory query runs
+ * (auth, routing, validation, OpenAPI), so the lazy DB client never connects.
  */
 describe('app (no database)', () => {
   const database = createDatabase('postgres://unused:unused@127.0.0.1:1/unused');
   let app: App;
 
   beforeAll(async () => {
-    app = await buildApp({ db: database.db });
+    app = await buildApp({ db: database.db, apiKeys });
     await app.ready();
   });
 
@@ -99,6 +110,7 @@ describe('app (no database)', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/memories',
+      headers: auth,
       payload: { type: 'secret', name: 'Not Kebab', description: 'd', content: 'c' },
     });
     expect(response.statusCode).toBe(400);
@@ -119,7 +131,7 @@ describe('app (no database)', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/memories',
-      headers: { 'content-type': 'application/json' },
+      headers: { ...auth, 'content-type': 'application/json' },
       payload: '{"name": ',
     });
     expect(response.statusCode).toBe(400);
@@ -131,6 +143,7 @@ describe('app (no database)', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/v1/memories',
+      headers: auth,
       payload: {
         type: 'feedback',
         name: 'prefers-pnpm',
@@ -151,8 +164,86 @@ describe('app (no database)', () => {
     expect(response.body).not.toMatch(/ECONNREFUSED|127\.0\.0\.1|postgres/i);
   });
 
+  describe('API key authentication', () => {
+    it.each([
+      ['no Authorization header', {}],
+      ['a non-Bearer scheme', { authorization: 'Basic dXNlcjpwYXNz' }],
+      ['a malformed key', { authorization: 'Bearer not-a-key' }],
+      ['an unknown key', { authorization: `Bearer ${generateApiKey()}` }],
+    ])('answers 401 with WWW-Authenticate for %s', async (_case, headers) => {
+      const response = await app.inject({ method: 'GET', url: '/v1/memories', headers });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.headers['www-authenticate']).toBe('Bearer realm="mindbridge"');
+      expect(response.headers['content-type']).toMatch(/^application\/problem\+json/);
+      expect(response.json()).toMatchObject({ status: 401, code: 'UNAUTHORIZED' });
+    });
+
+    it('authenticates before validating, so invalid input reveals nothing', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/memories',
+        payload: { type: 'secret' },
+      });
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).not.toHaveProperty('errors');
+    });
+
+    it('keeps health and docs public', async () => {
+      expect((await app.inject({ method: 'GET', url: '/openapi.json' })).statusCode).toBe(200);
+      expect((await app.inject({ method: 'GET', url: '/docs' })).statusCode).toBe(200);
+    });
+
+    it('documents the bearer scheme, and a 401, on every /v1 operation', async () => {
+      const response = await app.inject({ method: 'GET', url: '/openapi.json' });
+      interface Operation {
+        security?: Record<string, string[]>[];
+        responses: Record<string, unknown>;
+      }
+      const spec = response.json<{
+        paths: Record<string, Record<string, Operation>>;
+        components: { securitySchemes: Record<string, unknown> };
+      }>();
+
+      expect(spec.components.securitySchemes.apiKey).toMatchObject({
+        type: 'http',
+        scheme: 'bearer',
+      });
+      for (const [path, operations] of Object.entries(spec.paths)) {
+        for (const operation of Object.values(operations)) {
+          if (path.startsWith('/v1/')) {
+            expect(operation.security).toEqual([{ apiKey: [] }]);
+            expect(operation.responses).toHaveProperty('401');
+          } else {
+            expect(operation.security).toBeUndefined();
+          }
+        }
+      }
+    });
+
+    it('fails closed with a 500 when keys cannot be checked', async () => {
+      // Default store = real repository on an unreachable database.
+      const unchecked = await buildApp({ db: database.db });
+      try {
+        const response = await unchecked.inject({
+          method: 'GET',
+          url: '/v1/memories',
+          headers: auth,
+        });
+        expect(response.statusCode).toBe(500);
+        expect(response.json()).toMatchObject({ code: 'INTERNAL_ERROR' });
+      } finally {
+        await unchecked.close();
+      }
+    });
+  });
+
   it('rejects a non-UUID id before querying', async () => {
-    const response = await app.inject({ method: 'GET', url: '/v1/memories/not-a-uuid' });
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/memories/not-a-uuid',
+      headers: auth,
+    });
     expect(response.statusCode).toBe(400);
     expect(response.json()).toMatchObject({
       code: 'VALIDATION_ERROR',

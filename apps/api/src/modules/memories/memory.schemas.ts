@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { MEMORY_TYPES, type MemoryRow } from '../../db/schema.js';
+import { slugSchema } from '../../shared/slug.js';
 
-const KEBAB_CASE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 /** Lowercase host + path segments, e.g. "github.com/acme/widgets". */
 const PROJECT_KEY = /^[a-z0-9][a-z0-9.-]*(?:\/[a-z0-9._-]+)+$/;
 
@@ -9,12 +9,7 @@ export const memoryTypeSchema = z
   .enum(MEMORY_TYPES)
   .describe('user | feedback | project | reference');
 
-export const memoryNameSchema = z
-  .string()
-  .min(1)
-  .max(100)
-  .regex(KEBAB_CASE, { error: 'must be kebab-case (e.g. "prefers-pnpm")' })
-  .describe('Unique slug within the memory scope');
+export const memoryNameSchema = slugSchema(100).describe('Unique slug within the memory scope');
 
 export const projectKeySchema = z
   .string()

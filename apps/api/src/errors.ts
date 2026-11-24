@@ -40,11 +40,20 @@ export class HttpProblem extends Error {
     readonly status: number,
     readonly code: string,
     detail: string,
+    readonly headers: Record<string, string> = {},
   ) {
     super(detail);
   }
 }
 
+export const unauthorized = () =>
+  new HttpProblem(
+    401,
+    'UNAUTHORIZED',
+    'A valid API key is required: Authorization: Bearer <key>.',
+    // RFC 6750: tell the client which scheme to use.
+    { 'www-authenticate': 'Bearer realm="mindbridge"' },
+  );
 export const notFound = (detail: string) => new HttpProblem(404, 'NOT_FOUND', detail);
 export const conflict = (detail: string) => new HttpProblem(409, 'CONFLICT', detail);
 
@@ -96,6 +105,7 @@ export function registerErrorHandling(app: FastifyInstance): void {
         })),
       );
     } else if (error instanceof HttpProblem) {
+      reply.headers(error.headers);
       body = problem(error.status, error.code, error.message);
     } else if (isResponseSerializationError(error)) {
       request.log.error({ err: error, issues: error.cause.issues }, 'Response failed validation');

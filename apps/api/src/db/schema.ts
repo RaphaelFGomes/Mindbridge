@@ -1,5 +1,14 @@
 import { sql } from 'drizzle-orm';
-import { index, pgEnum, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import {
+  index,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 /**
  * Memory types, one fact per memory:
@@ -38,3 +47,31 @@ export const memories = pgTable(
 
 export type MemoryRow = typeof memories.$inferSelect;
 export type NewMemoryRow = typeof memories.$inferInsert;
+
+/**
+ * API keys, one per assistant or machine. Only a SHA-256 hash is stored: the
+ * plaintext key is shown once at creation. A fast hash is enough because keys
+ * carry 256 bits of randomness (slow hashes like bcrypt protect low-entropy
+ * passwords).
+ */
+export const apiKeys = pgTable(
+  'api_keys',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    /** First characters of the key, safe to display ("mb_9xQ2…"). */
+    prefix: text('prefix').notNull(),
+    keyHash: text('key_hash').notNull().unique('api_keys_key_hash_key'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  },
+  (table) => [
+    // Names identify active keys; a revoked key's name can be reused.
+    uniqueIndex('api_keys_active_name_key')
+      .on(table.name)
+      .where(sql`${table.revokedAt} is null`),
+  ],
+);
+
+export type ApiKeyRow = typeof apiKeys.$inferSelect;

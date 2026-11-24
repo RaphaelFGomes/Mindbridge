@@ -15,7 +15,8 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest --project unit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node --env-file-if-exists=.env --import tsx src/scripts/migrate.ts"
+    "db:migrate": "node --env-file-if-exists=.env --import tsx src/scripts/migrate.ts",
+    "keys": "node --env-file-if-exists=.env --import tsx src/scripts/keys.ts"
   },
   "dependencies": {
     "@fastify/swagger": "^9.9.5",
