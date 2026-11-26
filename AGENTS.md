@@ -194,10 +194,22 @@ tests/api/                Black-box API tests (Playwright `request`) + MCP over 
   `openapi.json` and the generated types are current), unit tests through the
   in-memory MCP transport and end-to-end tests spawning the real binary over
   stdio against the real API. Coverage for `apps/mcp` uploaded to Codecov.
-- **Next steps:**
-  1. Push and confirm CI is green.
-  2. Dogfood: connect Claude Code and Copilot to a local Mindbridge.
-  3. v0.3: Web UI + E2E + accessibility + visual tests.
+- 2026-11-26: Dogfooding works — Claude Code (user scope) saved and recalled a
+  global memory through the MCP server against a local API. Behind a proxy,
+  the MCP server needs `NODE_USE_ENV_PROXY=1` (documented in README).
+- 2026-11-26: v0.3 started. Increment 1 done: `packages/api-client` (typed
+  client shared by MCP and web, `list()` for paged results).
+- **v0.3 decisions:** Web UI = Next.js 16 + Tailwind 4 + hand-written
+  shadcn/ui-style components (the shadcn registry is unreachable from the
+  owner's sandbox). Login = paste an API key; the Next.js server keeps it in an
+  httpOnly, SameSite=Strict cookie and makes every API call server-side (the
+  browser never sees the key). Key management stays in the CLI.
+- **Next steps (v0.3):**
+  1. `apps/web`: login/logout, memories list with filters (project, type,
+     scope) and pagination, view, create, edit, delete with confirmation.
+  2. `tests/e2e`: Playwright browser flows, axe-core on every page, visual
+     snapshots run inside the official Playwright container (deterministic).
+  3. CI job for E2E; docs.
 
 ## Working rules
 
