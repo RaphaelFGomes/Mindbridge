@@ -1,0 +1,37 @@
+{
+  "name": "@mindbridge/web",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Mindbridge web UI (Next.js): browse and edit memories, signed in with an API key.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1 --port ${WEB_PORT:-3000}",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1 --port ${WEB_PORT:-3000}",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@mindbridge/api-client": "workspace:*",
+    "@tailwindcss/postcss": "4.3.5",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.80.0",
+    "next": "16.4.6",
+    "radix-ui": "^1.8.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^3.7.1",
+    "tailwindcss": "4.3.5",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.3",
+    "@types/react-dom": "^19.3.0",
+    "@vitest/coverage-v8": "5.1.1",
+    "vitest": "5.1.1"
+  }
+}

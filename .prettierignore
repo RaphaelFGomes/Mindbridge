@@ -1,6 +1,7 @@
 pnpm-lock.yaml
 apps/*/drizzle/meta/
 dist/
+.next/
 coverage/
 .turbo/
 # Generated from code; CI checks they are up to date

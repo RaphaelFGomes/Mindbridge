@@ -3,7 +3,8 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "env": ["NEXT_PUBLIC_*"]
     },
     "typecheck": {
       "dependsOn": ["^build"]
@@ -24,9 +25,17 @@
       "passThroughEnv": ["DOCKER_*", "TESTCONTAINERS_*"]
     },
     "dev": {
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true,
-      "passThroughEnv": ["DATABASE_URL", "HOST", "PORT", "LOG_LEVEL"]
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "HOST",
+        "PORT",
+        "LOG_LEVEL",
+        "MINDBRIDGE_API_URL",
+        "WEB_PORT"
+      ]
     },
     "test:api": {
       "dependsOn": ["@mindbridge/api#build", "@mindbridge/mcp#build"],
