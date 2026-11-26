@@ -3,3 +3,6 @@ apps/*/drizzle/meta/
 dist/
 coverage/
 .turbo/
+# Generated from code; CI checks they are up to date
+apps/api/openapi.json
+apps/*/src/generated/
