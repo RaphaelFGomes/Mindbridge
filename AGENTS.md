@@ -104,6 +104,7 @@ apps/web/                 Next.js 16 web UI (App Router, server-side API calls)
 packages/api-client/      Typed REST client shared by MCP and web
   src/generated/api.ts    types generated from apps/api/openapi.json — never edit
 tests/api/                Black-box API tests (Playwright `request`) + MCP over stdio
+tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScript project
   support/contract.ts     OpenAPI oracle: every response checked against /openapi.json
   fixtures.ts             per-test unique project key + auto-cleanup
 ```
@@ -118,6 +119,7 @@ tests/api/                Black-box API tests (Playwright `request`) + MCP over 
 | `pnpm test:api`                                                                                     | Playwright API tests (needs `pnpm db:up`; starts the built API on :4010, or uses `API_URL`) |
 | `pnpm test:coverage`                                                                                | Unit + integration with coverage + thresholds (needs Docker)                                |
 | `pnpm --filter @mindbridge/api openapi:export` then `pnpm --filter @mindbridge/api-client generate` | After an API change: refresh `openapi.json` and the client types (CI fails if stale)        |
+| `pnpm test:e2e`                                                                                     | Browser E2E + accessibility (needs `pnpm db:up`; builds and starts API :4011 + web :3011)   |
 | `pnpm keys:create --name <n>` / `keys:list` / `keys:revoke <n>`                                     | Manage API keys (plaintext shown once)                                                      |
 | `pnpm lint` / `pnpm typecheck` / `pnpm format:check`                                                | Static checks                                                                               |
 | `pnpm --filter @mindbridge/api db:generate`                                                         | New migration after a schema change                                                         |
@@ -177,6 +179,13 @@ tests/api/                Black-box API tests (Playwright `request`) + MCP over 
 - **Sandbox note:** Turbopack's PostCSS worker binds a local port, which the
   owner's assistant sandbox blocks; verify there with `next build --webpack`.
   The project itself builds with Turbopack (default).
+- **E2E:** seed data through the API (fast), exercise behaviour through the
+  UI. Each test gets a unique project; sign-in happens once in the `setup`
+  project and is reused via `storageState` (`tests/e2e/.auth/`, git-ignored:
+  it holds a key). Locate by role/label (`exact: true` for short labels), as a
+  user would. Every page state runs through `expectAccessible` (axe, WCAG 2.2
+  A/AA). The web server under test gets `MINDBRIDGE_API_KEY=''` so a local
+  `.env.local` shortcut can't skip the login flow being tested.
 - **Coverage:** the gate is `coverage.thresholds` in `apps/api/vitest.config.ts`
   (unit + integration combined). Codecov is reporting only: uploaded via OIDC
   (no token secret), `comment: false`, informational statuses. Raise the
@@ -225,10 +234,13 @@ tests/api/                Black-box API tests (Playwright `request`) + MCP over 
   memories list (project/type/global filters, pagination), view, create, edit,
   delete with a confirmation dialog; unit tests for the pure logic. MCP now
   hints "Is the API running?" on 502/503/504 too (found while dogfooding).
+- 2026-11-26: v0.3 increment 3a — `tests/e2e`: 26 browser tests (auth and
+  cookie flags, open-redirect guard, revoked-key session end, CRUD, form
+  regression, delete dialog keyboard behaviour, pagination, 404, skip link,
+  no-JavaScript project) and axe-core on every page and state.
 - **Next steps (v0.3):**
-  1. `tests/e2e`: Playwright browser flows, axe-core on every page, visual
-     snapshots run inside the official Playwright container (deterministic).
-  2. CI job for E2E.
+  1. Run the E2E suite locally and in CI; fix what it finds.
+  2. Increment 3b: visual snapshots in the official Playwright container.
 
 ## Working rules
 

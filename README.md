@@ -194,8 +194,9 @@ Errors use [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457)
 | Integration   | Vitest + Testcontainers (real Postgres, no DB mocks)             | ✅      |
 | API           | Playwright `request` + Schemathesis (OpenAPI-driven)             | ✅      |
 | Contract      | Pact (Web ↔ API, CLI ↔ API)                                      | Planned |
-| E2E + visual  | Playwright                                                       | Planned |
-| Accessibility | axe-core inside Playwright                                       | Planned |
+| E2E           | Playwright: user flows, security checks, no-JavaScript fallbacks | ✅      |
+| Visual        | Playwright screenshots in the official container                 | Planned |
+| Accessibility | axe-core (WCAG 2.2 AA) on every page and state, keyboard checks  | ✅      |
 | Performance   | k6 (load, stress, soak) with thresholds that fail CI             | Planned |
 | Security      | CodeQL, Semgrep, gitleaks, Trivy, OWASP ZAP baseline             | Planned |
 | Mutation      | Stryker                                                          | Planned |
@@ -207,6 +208,7 @@ pnpm test               # unit
 pnpm test:integration   # integration (needs Docker)
 pnpm test:coverage      # unit + integration with coverage (needs Docker)
 pnpm db:up && pnpm test:api   # black-box API tests against the built server
+pnpm db:up && pnpm test:e2e   # browser E2E + axe (first: pnpm --filter @mindbridge/e2e exec playwright install chromium)
 pnpm lint && pnpm typecheck && pnpm format:check
 ```
 
