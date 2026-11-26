@@ -37,3 +37,6 @@ pnpm-debug.log*
 
 # Local assistant settings
 .claude/settings.local.json
+
+# Playwright sessions (contain API keys)
+.auth/

@@ -16,6 +16,9 @@ export default tseslint.config(
       '**/next-env.d.ts',
       '**/drizzle/**',
       '**/generated/**',
+      // Test artifacts (Playwright HTML reports bundle minified JS).
+      '**/reports/**',
+      '**/test-results/**',
     ],
   },
   eslint.configs.recommended,

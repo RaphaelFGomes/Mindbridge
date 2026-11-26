@@ -1,0 +1,17 @@
+{
+  "name": "@mindbridge/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Browser end-to-end tests for the web UI: user flows, accessibility (axe-core), no-JavaScript fallbacks.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report reports/playwright"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.1",
+    "@playwright/test": "1.65.1"
+  }
+}

@@ -53,7 +53,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             )}
           </div>
         </header>
-        <main id="main" className="mx-auto max-w-5xl px-4 py-8">
+        {/* tabIndex -1: the skip link moves focus here, not just the scroll position. */}
+        <main id="main" tabIndex={-1} className="mx-auto max-w-5xl px-4 py-8 focus:outline-none">
           {children}
         </main>
       </body>
