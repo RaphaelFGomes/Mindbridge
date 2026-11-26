@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -55,34 +58,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # Unit + integration in one run, so coverage and its thresholds see both.
       - run: pnpm test:coverage
-      - name: Upload API coverage to Codecov
+      - name: Upload coverage to Codecov
         if: ${{ !cancelled() }}
         uses: codecov/codecov-action@v7
         with:
           use_oidc: true
-          files: apps/api/coverage/lcov.info
+          files: apps/api/coverage/lcov.info,apps/mcp/coverage/lcov.info,apps/web/coverage/lcov.info,packages/api-client/coverage/lcov.info
           disable_search: true
-          flags: api
-          # Reporting must never break PR builds (e.g. Dependabot); a failed upload on main should.
-          fail_ci_if_error: ${{ github.event_name == 'push' }}
-      - name: Upload MCP coverage to Codecov
-        if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v7
-        with:
-          use_oidc: true
-          files: apps/mcp/coverage/lcov.info
-          disable_search: true
-          flags: mcp
-          # Reporting must never break PR builds (e.g. Dependabot); a failed upload on main should.
-          fail_ci_if_error: ${{ github.event_name == 'push' }}
-      - name: Upload API client coverage to Codecov
-        if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v7
-        with:
-          use_oidc: true
-          files: packages/api-client/coverage/lcov.info
-          disable_search: true
-          flags: api-client
           # Reporting must never break PR builds (e.g. Dependabot); a failed upload on main should.
           fail_ci_if_error: ${{ github.event_name == 'push' }}
 
