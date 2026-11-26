@@ -7,3 +7,7 @@ allowBuilds:
   esbuild: false
   protobufjs: false
   ssh2: false
+peerDependencyRules:
+  allowedVersions:
+    # Only uses the stable TypeScript factory API to emit types; verified with TS 6.
+    openapi-typescript>typescript: '6'

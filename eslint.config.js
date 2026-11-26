@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['**/dist/**', '**/coverage/**', '**/.turbo/**', '**/drizzle/**'],
+    ignores: ['**/dist/**', '**/coverage/**', '**/.turbo/**', '**/drizzle/**', '**/generated/**'],
   },
   eslint.configs.recommended,
   tseslint.configs.strictTypeChecked,
@@ -33,6 +33,12 @@ export default tseslint.config(
   {
     files: ['**/*.js'],
     extends: [tseslint.configs.disableTypeChecked],
+  },
+  {
+    // stdout carries the MCP protocol: a stray console.log corrupts the session.
+    files: ['apps/mcp/src/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: { 'no-console': ['error', { allow: ['error'] }] },
   },
   prettier,
 );
