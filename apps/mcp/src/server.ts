@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
-import { MindbridgeApiError, type ApiClient, type Memory } from './api-client.js';
+import { MindbridgeApiError, type ApiClient, type Memory } from '@mindbridge/api-client';
 import { renderIndex, renderMemory } from './format.js';
 
 export const SERVER_VERSION = '0.2.0';

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { createApiClient } from './api-client.js';
+import { createApiClient } from '@mindbridge/api-client';
 import { ConfigError, loadConfig } from './config.js';
 import { detectProject } from './git-remote.js';
 import { createServer } from './server.js';

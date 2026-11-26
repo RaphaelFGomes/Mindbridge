@@ -1,4 +1,4 @@
-import type { Memory } from './api-client.js';
+import type { Memory } from '@mindbridge/api-client';
 
 const scopeOf = (memory: Memory) => memory.project ?? 'global';
 

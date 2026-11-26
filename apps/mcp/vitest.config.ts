@@ -2,6 +2,10 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // Resolve workspace packages to their TypeScript source, like tsconfig's customConditions.
+  ssr: {
+    resolve: { conditions: ['@mindbridge/source', 'module', 'node', 'development|production'] },
+  },
   test: {
     // See apps/api/vitest.config.ts: the on-disk module cache proved non-deterministic.
     fsModuleCache: false,
@@ -25,7 +29,7 @@ export default defineConfig({
       // Ratchet: just below measured coverage. Raise when it goes up; never lower.
       thresholds: {
         statements: 99,
-        branches: 91,
+        branches: 95,
         functions: 100,
         lines: 100,
       },

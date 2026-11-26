@@ -30,13 +30,13 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
-      - name: Generated files are up to date (migrations, OpenAPI, MCP client types)
+      - name: Generated files are up to date (migrations, OpenAPI, API client types)
         run: |
           pnpm --filter @mindbridge/api db:generate
           pnpm --filter @mindbridge/api openapi:export
-          pnpm --filter @mindbridge/mcp generate:api
-          git add --intent-to-add apps/api/drizzle apps/api/openapi.json apps/mcp/src/generated
-          git diff --exit-code -- apps/api/drizzle apps/api/openapi.json apps/mcp/src/generated
+          pnpm --filter @mindbridge/api-client generate
+          git add --intent-to-add apps/api/drizzle apps/api/openapi.json packages/api-client/src/generated
+          git diff --exit-code -- apps/api/drizzle apps/api/openapi.json packages/api-client/src/generated
 
   integration:
     name: Integration tests + coverage (Testcontainers + Postgres)
@@ -73,6 +73,16 @@ jobs:
           files: apps/mcp/coverage/lcov.info
           disable_search: true
           flags: mcp
+          # Reporting must never break PR builds (e.g. Dependabot); a failed upload on main should.
+          fail_ci_if_error: ${{ github.event_name == 'push' }}
+      - name: Upload API client coverage to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          use_oidc: true
+          files: packages/api-client/coverage/lcov.info
+          disable_search: true
+          flags: api-client
           # Reporting must never break PR builds (e.g. Dependabot); a failed upload on main should.
           fail_ci_if_error: ${{ github.event_name == 'push' }}
 

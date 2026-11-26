@@ -1,0 +1,33 @@
+{
+  "name": "@mindbridge/api-client",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Typed client for the Mindbridge REST API, generated from its OpenAPI document. Shared by the MCP server and the web app.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "@mindbridge/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "generate": "openapi-typescript ../../apps/api/openapi.json --output src/generated/api.ts"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.17.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "5.1.1",
+    "openapi-typescript": "^7.13.0",
+    "vitest": "5.1.1"
+  }
+}

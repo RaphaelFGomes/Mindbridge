@@ -2,7 +2,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createApiClient, type Memory } from './api-client.js';
+import { createApiClient, type Memory } from '@mindbridge/api-client';
 import { createServer } from './server.js';
 
 const API_URL = 'http://api.test';
@@ -155,6 +155,16 @@ describe('MCP server', () => {
       expect(text(result)).toContain('global-one');
     });
 
+    it('passes the type filter through in global-only mode too', async () => {
+      const api = fakeApi(page([memory({ id: 'g-1', project: null, type: 'user', name: 'tz' })]));
+      const client = await connect(null, api);
+
+      const result = await call(client, 'memory_index', { type: 'user' });
+
+      expect(api.requests[0]?.url.searchParams.get('type')).toBe('user');
+      expect(text(result)).toContain('[user] tz');
+    });
+
     it('passes the type filter through', async () => {
       const api = fakeApi(page([]));
       const client = await connect(PROJECT, api);
@@ -286,6 +296,24 @@ describe('MCP server', () => {
 
       expect(result.isError).toBe(true);
       expect(text(result)).toContain('Bad Gateway');
+    });
+
+    it('does not disguise unexpected errors as API errors', async () => {
+      const real = createApiClient({ baseUrl: API_URL, apiKey: KEY, fetch: fakeApi().fetch });
+      const server = createServer({
+        api: { ...real, listAll: () => Promise.reject(new Error('bug in the client')) },
+        project: PROJECT,
+      });
+      const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+      const client = new Client({ name: 'unit-tests', version: '0.0.0' });
+      await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
+      clients.push(client);
+
+      const result = await call(client, 'memory_index');
+
+      expect(result.isError).toBe(true);
+      expect(text(result)).toContain('bug in the client');
+      expect(text(result)).not.toContain('MINDBRIDGE_API_KEY');
     });
 
     it('says where it tried to connect when the API is down', async () => {

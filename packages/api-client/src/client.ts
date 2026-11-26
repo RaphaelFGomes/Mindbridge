@@ -14,6 +14,7 @@ export type MemoryPatch = NonNullable<
   MemoryPath['patch']['requestBody']
 >['content']['application/json'];
 export type ListQuery = NonNullable<MemoriesPath['get']['parameters']['query']>;
+export type MemoryList = MemoriesPath['get']['responses'][200]['content']['application/json'];
 
 interface Problem {
   status?: number;
@@ -79,17 +80,20 @@ export function createApiClient({ baseUrl, apiKey, fetch }: ApiClientOptions) {
     return data as T;
   }
 
+  /** One page, with the total across all pages. */
+  const list = (query: ListQuery): Promise<MemoryList> =>
+    call(() => client.GET('/v1/memories', { params: { query } }));
+
   return {
     baseUrl,
 
+    list,
+
+    /** Every page, for callers that need the full set (e.g. the MCP index). */
     async listAll(query: Omit<ListQuery, 'limit' | 'offset'>): Promise<Memory[]> {
       const items: Memory[] = [];
       for (let offset = 0; ; offset += PAGE_SIZE) {
-        const page = await call(() =>
-          client.GET('/v1/memories', {
-            params: { query: { ...query, limit: PAGE_SIZE, offset } },
-          }),
-        );
+        const page = await list({ ...query, limit: PAGE_SIZE, offset });
         items.push(...page.items);
         if (page.items.length < PAGE_SIZE) return items;
       }
