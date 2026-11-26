@@ -80,7 +80,10 @@ function toolError(error: unknown): CallToolResult {
     (error.status !== null ? hints[error.status] : undefined) ?? error.message,
     ...error.fieldErrors.map((field) => `- ${field.path}: ${field.message}`),
   ];
-  if (error.code === 'API_UNREACHABLE') lines.push('Is the Mindbridge API running?');
+  // Behind a proxy or gateway, a stopped API shows up as 502/503/504 rather than a refused connection.
+  // (A null status means there was no HTTP response at all.)
+  const unavailable = error.status === null || [502, 503, 504].includes(error.status);
+  if (unavailable) lines.push('Is the Mindbridge API running?');
   return { isError: true, content: [{ type: 'text', text: lines.join('\n') }] };
 }
 

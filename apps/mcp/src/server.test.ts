@@ -296,6 +296,8 @@ describe('MCP server', () => {
 
       expect(result.isError).toBe(true);
       expect(text(result)).toContain('Bad Gateway');
+      // Found while dogfooding: behind a proxy, a stopped API is a 502, not a refused connection.
+      expect(text(result)).toContain('Is the Mindbridge API running?');
     });
 
     it('does not disguise unexpected errors as API errors', async () => {
@@ -314,6 +316,12 @@ describe('MCP server', () => {
       expect(result.isError).toBe(true);
       expect(text(result)).toContain('bug in the client');
       expect(text(result)).not.toContain('MINDBRIDGE_API_KEY');
+    });
+
+    it.each([503, 504])('hints that the API may be down on a %i from a gateway', async (status) => {
+      const client = await connect(PROJECT, fakeApi(new Response(null, { status })));
+      const result = await call(client, 'memory_index');
+      expect(text(result)).toContain('Is the Mindbridge API running?');
     });
 
     it('says where it tried to connect when the API is down', async () => {
