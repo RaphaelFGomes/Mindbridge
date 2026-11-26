@@ -30,11 +30,13 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
-      - name: Database migrations match the schema
+      - name: Generated files are up to date (migrations, OpenAPI, MCP client types)
         run: |
           pnpm --filter @mindbridge/api db:generate
-          git add --intent-to-add apps/api/drizzle
-          git diff --exit-code -- apps/api/drizzle
+          pnpm --filter @mindbridge/api openapi:export
+          pnpm --filter @mindbridge/mcp generate:api
+          git add --intent-to-add apps/api/drizzle apps/api/openapi.json apps/mcp/src/generated
+          git diff --exit-code -- apps/api/drizzle apps/api/openapi.json apps/mcp/src/generated
 
   integration:
     name: Integration tests + coverage (Testcontainers + Postgres)
@@ -53,7 +55,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # Unit + integration in one run, so coverage and its thresholds see both.
       - run: pnpm test:coverage
-      - name: Upload coverage to Codecov
+      - name: Upload API coverage to Codecov
         if: ${{ !cancelled() }}
         uses: codecov/codecov-action@v7
         with:
@@ -61,6 +63,16 @@ jobs:
           files: apps/api/coverage/lcov.info
           disable_search: true
           flags: api
+          # Reporting must never break PR builds (e.g. Dependabot); a failed upload on main should.
+          fail_ci_if_error: ${{ github.event_name == 'push' }}
+      - name: Upload MCP coverage to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          use_oidc: true
+          files: apps/mcp/coverage/lcov.info
+          disable_search: true
+          flags: mcp
           # Reporting must never break PR builds (e.g. Dependabot); a failed upload on main should.
           fail_ci_if_error: ${{ github.event_name == 'push' }}
 

@@ -14,6 +14,4 @@ coverage:
       default:
         informational: true
 
-# Vitest runs from apps/api, so lcov paths are relative to it.
-fixes:
-  - 'src/::apps/api/src/'
+# lcov files carry repo-relative paths (projectRoot in each vitest.config.ts).

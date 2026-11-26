@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -16,7 +17,13 @@ export default defineConfig({
         'src/server.ts',
         'src/scripts/**',
       ],
-      reporter: ['text', 'html', 'lcov', 'json-summary'],
+      reporter: [
+        'text',
+        'html',
+        // Repo-relative paths, so Codecov maps files without path fixes.
+        ['lcov', { projectRoot: fileURLToPath(new URL('../..', import.meta.url)) }],
+        'json-summary',
+      ],
       // Ratchet: set just below the measured unit + integration coverage.
       // Raise when coverage goes up; never lower to make CI pass.
       thresholds: {
