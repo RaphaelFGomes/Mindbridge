@@ -94,23 +94,28 @@ apps/api/                 Fastify REST API
   src/**/*.test.ts        unit tests (no database)
   test/integration/       Testcontainers tests (real Postgres)
   drizzle/                generated SQL migrations — never edit by hand
-tests/api/                Black-box API tests (Playwright `request`)
+apps/mcp/                 MCP server (stdio), a client of the REST API
+  src/server.ts           tools: memory_index, get/save/update/delete_memory
+  src/git-remote.ts       project key from `git remote get-url origin`
+  src/generated/api.ts    types generated from apps/api/openapi.json — never edit
+tests/api/                Black-box API tests (Playwright `request`) + MCP over stdio
   support/contract.ts     OpenAPI oracle: every response checked against /openapi.json
   fixtures.ts             per-test unique project key + auto-cleanup
 ```
 
-| Command                                                         | What it does                                                                                |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `pnpm db:up`                                                    | Start Postgres + pgvector (Docker Compose)                                                  |
-| `pnpm db:migrate`                                               | Apply migrations (reads `apps/api/.env`)                                                    |
-| `pnpm dev`                                                      | API with reload on <http://127.0.0.1:4000>                                                  |
-| `pnpm test`                                                     | Unit tests                                                                                  |
-| `pnpm test:integration`                                         | Integration tests (needs Docker, starts its own DB)                                         |
-| `pnpm test:api`                                                 | Playwright API tests (needs `pnpm db:up`; starts the built API on :4010, or uses `API_URL`) |
-| `pnpm test:coverage`                                            | Unit + integration with coverage + thresholds (needs Docker)                                |
-| `pnpm keys:create --name <n>` / `keys:list` / `keys:revoke <n>` | Manage API keys (plaintext shown once)                                                      |
-| `pnpm lint` / `pnpm typecheck` / `pnpm format:check`            | Static checks                                                                               |
-| `pnpm --filter @mindbridge/api db:generate`                     | New migration after a schema change                                                         |
+| Command                                                                                          | What it does                                                                                |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `pnpm db:up`                                                                                     | Start Postgres + pgvector (Docker Compose)                                                  |
+| `pnpm db:migrate`                                                                                | Apply migrations (reads `apps/api/.env`)                                                    |
+| `pnpm dev`                                                                                       | API with reload on <http://127.0.0.1:4000>                                                  |
+| `pnpm test`                                                                                      | Unit tests                                                                                  |
+| `pnpm test:integration`                                                                          | Integration tests (needs Docker, starts its own DB)                                         |
+| `pnpm test:api`                                                                                  | Playwright API tests (needs `pnpm db:up`; starts the built API on :4010, or uses `API_URL`) |
+| `pnpm test:coverage`                                                                             | Unit + integration with coverage + thresholds (needs Docker)                                |
+| `pnpm --filter @mindbridge/api openapi:export` then `pnpm --filter @mindbridge/mcp generate:api` | After an API change: refresh `openapi.json` and the MCP client types (CI fails if stale)    |
+| `pnpm keys:create --name <n>` / `keys:list` / `keys:revoke <n>`                                  | Manage API keys (plaintext shown once)                                                      |
+| `pnpm lint` / `pnpm typecheck` / `pnpm format:check`                                             | Static checks                                                                               |
+| `pnpm --filter @mindbridge/api db:generate`                                                      | New migration after a schema change                                                         |
 
 ## Conventions
 
@@ -144,6 +149,12 @@ tests/api/                Black-box API tests (Playwright `request`)
   `/docs`, `/openapi.json` stay public. Unit tests inject an in-memory
   `ApiKeyStore`; integration tests use real keys (`ctx.inject` adds one);
   API tests get a throwaway key from global setup (or `MINDBRIDGE_API_KEY`).
+- **MCP server:** never write to stdout (it carries the protocol); ESLint
+  allows only `console.error` in `apps/mcp/src`. The server talks to the API
+  over HTTP with an API key — it never touches the database. Its HTTP client is
+  typed from the generated OpenAPI types, and a compile-time assertion keeps
+  its zod output schema equal to the contract. Tool errors are returned as
+  `isError` results with a recovery hint, not thrown.
 - **Coverage:** the gate is `coverage.thresholds` in `apps/api/vitest.config.ts`
   (unit + integration combined). Codecov is reporting only: uploaded via OIDC
   (no token secret), `comment: false`, informational statuses. Raise the
@@ -173,9 +184,15 @@ tests/api/                Black-box API tests (Playwright `request`)
   CLI to create/list/revoke, 401 + `WWW-Authenticate` before validation,
   bearer scheme documented in OpenAPI (Schemathesis now runs authenticated
   and checks `ignored_auth`). This completes the v0.1 scope.
+- 2026-11-25: v0.2 MCP server (stdio) — 5 tools, project detection from the
+  git remote, HTTP client typed from the committed OpenAPI document (CI checks
+  `openapi.json` and the generated types are current), unit tests through the
+  in-memory MCP transport and end-to-end tests spawning the real binary over
+  stdio against the real API. Coverage for `apps/mcp` uploaded to Codecov.
 - **Next steps:**
-  1. Push and confirm CI is green (first run with auth).
-  2. Start v0.2: local MCP server (stdio) for Claude Code and Copilot.
+  1. Push and confirm CI is green.
+  2. Dogfood: connect Claude Code and Copilot to a local Mindbridge.
+  3. v0.3: Web UI + E2E + accessibility + visual tests.
 
 ## Working rules
 

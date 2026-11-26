@@ -92,6 +92,66 @@ fast hash is enough for high-entropy keys (bcrypt or argon2 exist to protect
 low-entropy passwords). Missing or invalid keys get a `401` with
 `WWW-Authenticate: Bearer` before any input is validated.
 
+## Connect your assistant (MCP)
+
+The MCP server (`apps/mcp`) is a thin client of the REST API: each assistant gets
+its own API key, and memories are scoped to the git repository the assistant is
+working in (detected from `git remote get-url origin`, so SSH and HTTPS clones
+share memories).
+
+```bash
+pnpm --filter @mindbridge/mcp build
+pnpm keys:create --name claude-code     # one key per assistant
+```
+
+**Claude Code**
+
+```bash
+claude mcp add --transport stdio mindbridge --scope user \
+  --env MINDBRIDGE_API_URL=http://127.0.0.1:4000 \
+  --env MINDBRIDGE_API_KEY=mb_... \
+  -- node /absolute/path/to/Mindbridge/apps/mcp/dist/index.js
+```
+
+**VS Code (Copilot agent mode)**: `.vscode/mcp.json` (the key is prompted for, never stored in the file)
+
+```json
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "mindbridge-key",
+      "description": "Mindbridge API key",
+      "password": true
+    }
+  ],
+  "servers": {
+    "mindbridge": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/absolute/path/to/Mindbridge/apps/mcp/dist/index.js"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "MINDBRIDGE_API_URL": "http://127.0.0.1:4000",
+        "MINDBRIDGE_API_KEY": "${input:mindbridge-key}"
+      }
+    }
+  }
+}
+```
+
+Other MCP clients (Cursor, Gemini CLI...) take the same command and environment.
+If a client does not start the server in your repository, set `MINDBRIDGE_PROJECT`
+(e.g. `github.com/acme/widgets`).
+
+| Tool            | What it does                                                     |
+| --------------- | ---------------------------------------------------------------- |
+| `memory_index`  | One line per memory (this project + global): call it first       |
+| `get_memory`    | Read one memory in full                                          |
+| `save_memory`   | Save one fact, scoped to the project (default) or global         |
+| `update_memory` | Change type, name, description or content                        |
+| `delete_memory` | Delete a memory (marked destructive, so clients ask for consent) |
+
 ## API
 
 | Method   | Path               | Description                                                  |
@@ -108,18 +168,19 @@ Errors use [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457)
 
 ## Testing
 
-| Type          | Tool                                                       | Status  |
-| ------------- | ---------------------------------------------------------- | ------- |
-| Unit          | Vitest (incl. HTTP-level tests via `app.inject`)           | ✅      |
-| Integration   | Vitest + Testcontainers (real Postgres, no DB mocks)       | ✅      |
-| API           | Playwright `request` + Schemathesis (OpenAPI-driven)       | ✅      |
-| Contract      | Pact (Web ↔ API, CLI ↔ API)                                | Planned |
-| E2E + visual  | Playwright                                                 | Planned |
-| Accessibility | axe-core inside Playwright                                 | Planned |
-| Performance   | k6 (load, stress, soak) with thresholds that fail CI       | Planned |
-| Security      | CodeQL, Semgrep, gitleaks, Trivy, OWASP ZAP baseline       | Planned |
-| Mutation      | Stryker                                                    | Planned |
-| AI evals      | promptfoo — does the AI retrieve the right memory via MCP? | Planned |
+| Type          | Tool                                                             | Status  |
+| ------------- | ---------------------------------------------------------------- | ------- |
+| Unit          | Vitest (incl. HTTP-level tests via `app.inject`)                 | ✅      |
+| Integration   | Vitest + Testcontainers (real Postgres, no DB mocks)             | ✅      |
+| API           | Playwright `request` + Schemathesis (OpenAPI-driven)             | ✅      |
+| Contract      | Pact (Web ↔ API, CLI ↔ API)                                      | Planned |
+| E2E + visual  | Playwright                                                       | Planned |
+| Accessibility | axe-core inside Playwright                                       | Planned |
+| Performance   | k6 (load, stress, soak) with thresholds that fail CI             | Planned |
+| Security      | CodeQL, Semgrep, gitleaks, Trivy, OWASP ZAP baseline             | Planned |
+| Mutation      | Stryker                                                          | Planned |
+| MCP           | Vitest + in-memory MCP transport; stdio end-to-end in Playwright | ✅      |
+| AI evals      | promptfoo — does the AI retrieve the right memory via MCP?       | Planned |
 
 ```bash
 pnpm test               # unit
