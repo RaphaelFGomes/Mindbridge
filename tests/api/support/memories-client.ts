@@ -97,6 +97,11 @@ export class MemoriesClient {
     return response;
   }
 
+  /** Registers a memory created by other means (e.g. through MCP) for cleanup. */
+  track(id: string): void {
+    this.created.add(id);
+  }
+
   /** Teardown: delete whatever the test left behind (already-deleted ids are fine). */
   async cleanup(): Promise<void> {
     await Promise.all([...this.created].map((id) => this.request.delete(`/v1/memories/${id}`)));
