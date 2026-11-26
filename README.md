@@ -31,10 +31,11 @@ as `github.com/acme/widgets`) or global.
 ## Architecture
 
 ```text
-Claude Code ─┐                  ┌─ REST API (Fastify + Zod) ─┐
-Copilot ─────┼── MCP (v0.2) ────┤                            ├── PostgreSQL + pgvector
-Cursor ──────┤                  └─ CLI (v1.0) ───────────────┘
-ChatGPT ─────┘  (remote MCP + OAuth, v1.0)
+Claude Code ─┐
+Copilot ─────┼── MCP server ─┐
+Cursor ──────┘               ├── REST API (Fastify + Zod) ── PostgreSQL + pgvector
+Browser ───── Web UI ────────┤
+                 CLI (v1.0) ─┘   ChatGPT: remote MCP + OAuth (v1.0)
 ```
 
 | Layer    | Tool                                                  |
@@ -56,7 +57,7 @@ pnpm db:up                         # Postgres + pgvector on localhost:5432
 cp apps/api/.env.example apps/api/.env
 pnpm db:migrate
 pnpm keys:create --name my-laptop  # prints an API key once: store it
-pnpm dev                           # API on http://127.0.0.1:4000
+pnpm dev                           # API on :4000, web UI on http://127.0.0.1:3000
 ```
 
 - Interactive docs: <http://127.0.0.1:4000/docs>
@@ -91,6 +92,20 @@ prefix lets secret scanners spot leaked keys. Only a SHA-256 hash is stored: a
 fast hash is enough for high-entropy keys (bcrypt or argon2 exist to protect
 low-entropy passwords). Missing or invalid keys get a `401` with
 `WWW-Authenticate: Bearer` before any input is validated.
+
+## Web UI
+
+`pnpm dev` also starts the web app on <http://127.0.0.1:3000>: browse memories by
+project and type, read, create, edit and delete them. Sign in with an API key
+(`pnpm keys:create --name web`): the Next.js server keeps it in an httpOnly,
+SameSite=Strict cookie and makes every API call itself, so the browser never
+sees the key. Forms work without JavaScript, and every page is checked with
+axe-core.
+
+Tired of pasting the key locally? Put `MINDBRIDGE_API_KEY=mb_...` in
+`apps/web/.env.local` (git-ignored) and the login page is skipped. The dev server
+only listens on 127.0.0.1; never set it on a server others can reach. Port 3000
+taken? `WEB_PORT=3001 pnpm dev`.
 
 ## Connect your assistant (MCP)
 

@@ -97,6 +97,10 @@ apps/api/                 Fastify REST API
 apps/mcp/                 MCP server (stdio), a client of the REST API
   src/server.ts           tools: memory_index, get/save/update/delete_memory
   src/git-remote.ts       project key from `git remote get-url origin`
+apps/web/                 Next.js 16 web UI (App Router, server-side API calls)
+  src/proxy.ts            redirects to /login without a session cookie
+  src/lib/session.ts      API key in an httpOnly cookie (server-only)
+  src/lib/*.ts            pure logic (filters, form mapping, safe redirects) — unit tested
 packages/api-client/      Typed REST client shared by MCP and web
   src/generated/api.ts    types generated from apps/api/openapi.json — never edit
 tests/api/                Black-box API tests (Playwright `request`) + MCP over stdio
@@ -108,7 +112,7 @@ tests/api/                Black-box API tests (Playwright `request`) + MCP over 
 | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `pnpm db:up`                                                                                        | Start Postgres + pgvector (Docker Compose)                                                  |
 | `pnpm db:migrate`                                                                                   | Apply migrations (reads `apps/api/.env`)                                                    |
-| `pnpm dev`                                                                                          | API with reload on <http://127.0.0.1:4000>                                                  |
+| `pnpm dev`                                                                                          | API on :4000 + web UI on <http://127.0.0.1:3000>                                            |
 | `pnpm test`                                                                                         | Unit tests                                                                                  |
 | `pnpm test:integration`                                                                             | Integration tests (needs Docker, starts its own DB)                                         |
 | `pnpm test:api`                                                                                     | Playwright API tests (needs `pnpm db:up`; starts the built API on :4010, or uses `API_URL`) |
@@ -160,6 +164,19 @@ tests/api/                Black-box API tests (Playwright `request`) + MCP over 
   `src/index.ts`: typecheck, lint (tsconfig `customConditions`) and Vitest
   (`ssr.resolve.conditions`) use the source, while `tsconfig.build.json`
   resets `customConditions` so builds and runtime use `dist`.
+- **Web UI:** every API call happens on the Next.js server (`withApi`),
+  never in the browser; modules touching the key import `server-only`. Pages
+  type `params`/`searchParams` explicitly (no generated `PageProps`), so lint
+  and typecheck don't need a prior build. Forms post to Server Actions and work
+  without JavaScript; API problems map onto fields (`toFormState`). Dates are
+  rendered in UTC/en-US so pages (and screenshots) are deterministic. Login
+  redirects only to same-origin paths (`safeNextPath`). Optional local shortcut:
+  `MINDBRIDGE_API_KEY` in `apps/web/.env.local` skips the login (the cookie
+  still wins when present); the dev/start servers bind to 127.0.0.1 for that
+  reason. Port via `WEB_PORT` (default 3000).
+- **Sandbox note:** Turbopack's PostCSS worker binds a local port, which the
+  owner's assistant sandbox blocks; verify there with `next build --webpack`.
+  The project itself builds with Turbopack (default).
 - **Coverage:** the gate is `coverage.thresholds` in `apps/api/vitest.config.ts`
   (unit + integration combined). Codecov is reporting only: uploaded via OIDC
   (no token secret), `comment: false`, informational statuses. Raise the
@@ -204,12 +221,14 @@ tests/api/                Black-box API tests (Playwright `request`) + MCP over 
   owner's sandbox). Login = paste an API key; the Next.js server keeps it in an
   httpOnly, SameSite=Strict cookie and makes every API call server-side (the
   browser never sees the key). Key management stays in the CLI.
+- 2026-11-26: v0.3 increment 2 — `apps/web`: login with an API key,
+  memories list (project/type/global filters, pagination), view, create, edit,
+  delete with a confirmation dialog; unit tests for the pure logic. MCP now
+  hints "Is the API running?" on 502/503/504 too (found while dogfooding).
 - **Next steps (v0.3):**
-  1. `apps/web`: login/logout, memories list with filters (project, type,
-     scope) and pagination, view, create, edit, delete with confirmation.
-  2. `tests/e2e`: Playwright browser flows, axe-core on every page, visual
+  1. `tests/e2e`: Playwright browser flows, axe-core on every page, visual
      snapshots run inside the official Playwright container (deterministic).
-  3. CI job for E2E; docs.
+  2. CI job for E2E.
 
 ## Working rules
 
