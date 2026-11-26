@@ -97,25 +97,26 @@ apps/api/                 Fastify REST API
 apps/mcp/                 MCP server (stdio), a client of the REST API
   src/server.ts           tools: memory_index, get/save/update/delete_memory
   src/git-remote.ts       project key from `git remote get-url origin`
+packages/api-client/      Typed REST client shared by MCP and web
   src/generated/api.ts    types generated from apps/api/openapi.json — never edit
 tests/api/                Black-box API tests (Playwright `request`) + MCP over stdio
   support/contract.ts     OpenAPI oracle: every response checked against /openapi.json
   fixtures.ts             per-test unique project key + auto-cleanup
 ```
 
-| Command                                                                                          | What it does                                                                                |
-| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| `pnpm db:up`                                                                                     | Start Postgres + pgvector (Docker Compose)                                                  |
-| `pnpm db:migrate`                                                                                | Apply migrations (reads `apps/api/.env`)                                                    |
-| `pnpm dev`                                                                                       | API with reload on <http://127.0.0.1:4000>                                                  |
-| `pnpm test`                                                                                      | Unit tests                                                                                  |
-| `pnpm test:integration`                                                                          | Integration tests (needs Docker, starts its own DB)                                         |
-| `pnpm test:api`                                                                                  | Playwright API tests (needs `pnpm db:up`; starts the built API on :4010, or uses `API_URL`) |
-| `pnpm test:coverage`                                                                             | Unit + integration with coverage + thresholds (needs Docker)                                |
-| `pnpm --filter @mindbridge/api openapi:export` then `pnpm --filter @mindbridge/mcp generate:api` | After an API change: refresh `openapi.json` and the MCP client types (CI fails if stale)    |
-| `pnpm keys:create --name <n>` / `keys:list` / `keys:revoke <n>`                                  | Manage API keys (plaintext shown once)                                                      |
-| `pnpm lint` / `pnpm typecheck` / `pnpm format:check`                                             | Static checks                                                                               |
-| `pnpm --filter @mindbridge/api db:generate`                                                      | New migration after a schema change                                                         |
+| Command                                                                                             | What it does                                                                                |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `pnpm db:up`                                                                                        | Start Postgres + pgvector (Docker Compose)                                                  |
+| `pnpm db:migrate`                                                                                   | Apply migrations (reads `apps/api/.env`)                                                    |
+| `pnpm dev`                                                                                          | API with reload on <http://127.0.0.1:4000>                                                  |
+| `pnpm test`                                                                                         | Unit tests                                                                                  |
+| `pnpm test:integration`                                                                             | Integration tests (needs Docker, starts its own DB)                                         |
+| `pnpm test:api`                                                                                     | Playwright API tests (needs `pnpm db:up`; starts the built API on :4010, or uses `API_URL`) |
+| `pnpm test:coverage`                                                                                | Unit + integration with coverage + thresholds (needs Docker)                                |
+| `pnpm --filter @mindbridge/api openapi:export` then `pnpm --filter @mindbridge/api-client generate` | After an API change: refresh `openapi.json` and the client types (CI fails if stale)        |
+| `pnpm keys:create --name <n>` / `keys:list` / `keys:revoke <n>`                                     | Manage API keys (plaintext shown once)                                                      |
+| `pnpm lint` / `pnpm typecheck` / `pnpm format:check`                                                | Static checks                                                                               |
+| `pnpm --filter @mindbridge/api db:generate`                                                         | New migration after a schema change                                                         |
 
 ## Conventions
 
@@ -155,6 +156,10 @@ tests/api/                Black-box API tests (Playwright `request`) + MCP over 
   typed from the generated OpenAPI types, and a compile-time assertion keeps
   its zod output schema equal to the contract. Tool errors are returned as
   `isError` results with a recovery hint, not thrown.
+- **Workspace packages** export a `@mindbridge/source` condition pointing at
+  `src/index.ts`: typecheck, lint (tsconfig `customConditions`) and Vitest
+  (`ssr.resolve.conditions`) use the source, while `tsconfig.build.json`
+  resets `customConditions` so builds and runtime use `dist`.
 - **Coverage:** the gate is `coverage.thresholds` in `apps/api/vitest.config.ts`
   (unit + integration combined). Codecov is reporting only: uploaded via OIDC
   (no token secret), `comment: false`, informational statuses. Raise the

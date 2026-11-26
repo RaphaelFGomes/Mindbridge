@@ -144,6 +144,11 @@ Other MCP clients (Cursor, Gemini CLI...) take the same command and environment.
 If a client does not start the server in your repository, set `MINDBRIDGE_PROJECT`
 (e.g. `github.com/acme/widgets`).
 
+**Behind an HTTP proxy?** Node's `fetch` ignores `HTTP(S)_PROXY` unless
+`NODE_USE_ENV_PROXY=1` is set (Node 24+). If the server reports the API as
+unreachable while `curl` works, add `NODE_USE_ENV_PROXY=1` to its environment
+(e.g. `--env NODE_USE_ENV_PROXY=1`).
+
 | Tool            | What it does                                                     |
 | --------------- | ---------------------------------------------------------------- |
 | `memory_index`  | One line per memory (this project + global): call it first       |
