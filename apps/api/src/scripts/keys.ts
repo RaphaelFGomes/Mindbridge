@@ -4,6 +4,7 @@ import { createDatabase } from '../db/client.js';
 import { isUniqueViolation } from '../db/errors.js';
 import { apiKeyNameSchema } from '../modules/api-keys/api-key.js';
 import { ApiKeyRepository } from '../modules/api-keys/api-key.repository.js';
+import { runCli } from './cli.js';
 
 const USAGE = `Manage Mindbridge API keys.
 
@@ -32,6 +33,10 @@ const formatDate = (date: Date | null) => (date ? date.toISOString() : '-');
 if (values.help || command === undefined) {
   console.log(USAGE);
 } else {
+  await runCli(manage);
+}
+
+async function manage() {
   const { db, close } = createDatabase(loadConfig().DATABASE_URL, { max: 1 });
   const keys = new ApiKeyRepository(db);
 
