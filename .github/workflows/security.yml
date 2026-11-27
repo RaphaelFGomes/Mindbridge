@@ -52,9 +52,11 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v7
+      # Runs as the runner's user (reports aren't root-owned); that user has no home
+      # in the image, and Semgrep needs one for its settings and logs.
       - name: Scan
         run: >-
-          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/src" -w /src
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/src" -w /src
           semgrep/semgrep:1.187.0
           semgrep scan --metrics off --error
           --config p/default --config p/typescript --config p/nodejs --config p/react
