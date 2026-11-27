@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { StyleNonce } from '@/components/style-nonce';
 import { Button } from '@/components/ui/button';
 import { credentials } from '@/lib/session';
 import { signOut } from './actions';
@@ -13,11 +15,14 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const current = await credentials();
+  // Set by src/proxy.ts for this request's Content-Security-Policy.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   const signedIn = current !== null;
 
   return (
     <html lang="en">
       <body className="min-h-screen font-sans antialiased">
+        <StyleNonce nonce={nonce} />
         <a
           href="#main"
           className="sr-only rounded-md bg-primary px-3 py-2 text-primary-foreground focus:not-sr-only focus:absolute focus:top-2 focus:left-2"
