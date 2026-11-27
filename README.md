@@ -188,20 +188,20 @@ Errors use [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457)
 
 ## Testing
 
-| Type          | Tool                                                             | Status  |
-| ------------- | ---------------------------------------------------------------- | ------- |
-| Unit          | Vitest (incl. HTTP-level tests via `app.inject`)                 | ✅      |
-| Integration   | Vitest + Testcontainers (real Postgres, no DB mocks)             | ✅      |
-| API           | Playwright `request` + Schemathesis (OpenAPI-driven)             | ✅      |
-| Contract      | Pact (Web ↔ API, CLI ↔ API)                                      | Planned |
-| E2E           | Playwright: user flows, security checks, no-JavaScript fallbacks | ✅      |
-| Visual        | Playwright screenshots in the official container                 | Planned |
-| Accessibility | axe-core (WCAG 2.2 AA) on every page and state, keyboard checks  | ✅      |
-| Performance   | k6 (load, stress, soak) with thresholds that fail CI             | Planned |
-| Security      | CodeQL, Semgrep, gitleaks, Trivy, OWASP ZAP baseline             | Planned |
-| Mutation      | Stryker                                                          | Planned |
-| MCP           | Vitest + in-memory MCP transport; stdio end-to-end in Playwright | ✅      |
-| AI evals      | promptfoo — does the AI retrieve the right memory via MCP?       | Planned |
+| Type          | Tool                                                                         | Status  |
+| ------------- | ---------------------------------------------------------------------------- | ------- |
+| Unit          | Vitest (incl. HTTP-level tests via `app.inject`)                             | ✅      |
+| Integration   | Vitest + Testcontainers (real Postgres, no DB mocks)                         | ✅      |
+| API           | Playwright `request` + Schemathesis (OpenAPI-driven)                         | ✅      |
+| Contract      | Pact (Web ↔ API, CLI ↔ API)                                                  | Planned |
+| E2E           | Playwright: user flows, security checks, no-JavaScript fallbacks             | ✅      |
+| Visual        | Playwright screenshots (desktop + mobile), browser in the official container | ✅      |
+| Accessibility | axe-core (WCAG 2.2 AA) on every page and state, keyboard checks              | ✅      |
+| Performance   | k6 (load, stress, soak) with thresholds that fail CI                         | Planned |
+| Security      | CodeQL, Semgrep, gitleaks, Trivy, OWASP ZAP baseline                         | Planned |
+| Mutation      | Stryker                                                                      | Planned |
+| MCP           | Vitest + in-memory MCP transport; stdio end-to-end in Playwright             | ✅      |
+| AI evals      | promptfoo — does the AI retrieve the right memory via MCP?                   | Planned |
 
 ```bash
 pnpm test               # unit
@@ -209,6 +209,7 @@ pnpm test:integration   # integration (needs Docker)
 pnpm test:coverage      # unit + integration with coverage (needs Docker)
 pnpm db:up && pnpm test:api   # black-box API tests against the built server
 pnpm db:up && pnpm test:e2e   # browser E2E + axe (first: pnpm --filter @mindbridge/e2e exec playwright install chromium)
+pnpm visual:browser && pnpm test:visual   # screenshots; add -- --update-snapshots after an intended UI change
 pnpm lint && pnpm typecheck && pnpm format:check
 ```
 

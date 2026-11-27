@@ -109,20 +109,21 @@ tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScri
   fixtures.ts             per-test unique project key + auto-cleanup
 ```
 
-| Command                                                                                             | What it does                                                                                |
-| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `pnpm db:up`                                                                                        | Start Postgres + pgvector (Docker Compose)                                                  |
-| `pnpm db:migrate`                                                                                   | Apply migrations (reads `apps/api/.env`)                                                    |
-| `pnpm dev`                                                                                          | API on :4000 + web UI on <http://127.0.0.1:3000>                                            |
-| `pnpm test`                                                                                         | Unit tests                                                                                  |
-| `pnpm test:integration`                                                                             | Integration tests (needs Docker, starts its own DB)                                         |
-| `pnpm test:api`                                                                                     | Playwright API tests (needs `pnpm db:up`; starts the built API on :4010, or uses `API_URL`) |
-| `pnpm test:coverage`                                                                                | Unit + integration with coverage + thresholds (needs Docker)                                |
-| `pnpm --filter @mindbridge/api openapi:export` then `pnpm --filter @mindbridge/api-client generate` | After an API change: refresh `openapi.json` and the client types (CI fails if stale)        |
-| `pnpm test:e2e`                                                                                     | Browser E2E + accessibility (needs `pnpm db:up`; builds and starts API :4011 + web :3011)   |
-| `pnpm keys:create --name <n>` / `keys:list` / `keys:revoke <n>`                                     | Manage API keys (plaintext shown once)                                                      |
-| `pnpm lint` / `pnpm typecheck` / `pnpm format:check`                                                | Static checks                                                                               |
-| `pnpm --filter @mindbridge/api db:generate`                                                         | New migration after a schema change                                                         |
+| Command                                                                                             | What it does                                                                                                                                                                  |
+| --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm db:up`                                                                                        | Start Postgres + pgvector (Docker Compose)                                                                                                                                    |
+| `pnpm db:migrate`                                                                                   | Apply migrations (reads `apps/api/.env`)                                                                                                                                      |
+| `pnpm dev`                                                                                          | API on :4000 + web UI on <http://127.0.0.1:3000>                                                                                                                              |
+| `pnpm test`                                                                                         | Unit tests                                                                                                                                                                    |
+| `pnpm test:integration`                                                                             | Integration tests (needs Docker, starts its own DB)                                                                                                                           |
+| `pnpm test:api`                                                                                     | Playwright API tests (needs `pnpm db:up`; starts the built API on :4010, or uses `API_URL`)                                                                                   |
+| `pnpm test:coverage`                                                                                | Unit + integration with coverage + thresholds (needs Docker)                                                                                                                  |
+| `pnpm --filter @mindbridge/api openapi:export` then `pnpm --filter @mindbridge/api-client generate` | After an API change: refresh `openapi.json` and the client types (CI fails if stale)                                                                                          |
+| `pnpm test:e2e`                                                                                     | Browser E2E + accessibility (needs `pnpm db:up`; builds and starts API :4011 + web :3011)                                                                                     |
+| `pnpm visual:browser` then `pnpm test:visual`                                                       | Visual snapshots; the browser runs in the official Playwright container (`-- --update-snapshots` to accept an intended change, then commit `tests/e2e/specs/__screenshots__`) |
+| `pnpm keys:create --name <n>` / `keys:list` / `keys:revoke <n>`                                     | Manage API keys (plaintext shown once)                                                                                                                                        |
+| `pnpm lint` / `pnpm typecheck` / `pnpm format:check`                                                | Static checks                                                                                                                                                                 |
+| `pnpm --filter @mindbridge/api db:generate`                                                         | New migration after a schema change                                                                                                                                           |
 
 ## Conventions
 
@@ -186,6 +187,12 @@ tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScri
   user would. Every page state runs through `expectAccessible` (axe, WCAG 2.2
   A/AA). The web server under test gets `MINDBRIDGE_API_KEY=''` so a local
   `.env.local` shortcut can't skip the login flow being tested.
+- **Visual tests:** screenshots only come from the containerized browser
+  (`connectOptions` + `exposeNetwork: '<loopback>'`), never a local one, so
+  baselines are byte-for-byte reproducible on macOS and CI. The container tag
+  is read from the installed `@playwright/test`. Mask anything that changes per
+  run (dates, project keys); keep seeded names fixed. Update baselines only for
+  intended UI changes, and review the PNG diffs before committing.
 - **Coverage:** the gate is `coverage.thresholds` in `apps/api/vitest.config.ts`
   (unit + integration combined). Codecov is reporting only: uploaded via OIDC
   (no token secret), `comment: false`, informational statuses. Raise the
@@ -238,9 +245,13 @@ tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScri
   cookie flags, open-redirect guard, revoked-key session end, CRUD, form
   regression, delete dialog keyboard behaviour, pagination, 404, skip link,
   no-JavaScript project) and axe-core on every page and state.
+- 2026-11-26: v0.3 increment 3b — visual snapshots of every page (desktop +
+  Pixel 7) with the browser in the official Playwright container; header now
+  wraps on narrow screens.
 - **Next steps (v0.3):**
-  1. Run the E2E suite locally and in CI; fix what it finds.
-  2. Increment 3b: visual snapshots in the official Playwright container.
+  1. Generate and commit the first baselines locally; confirm CI matches them.
+  2. Close v0.3 (README roadmap), then plan v0.4 (k6, security pipeline,
+     mutation testing).
 
 ## Working rules
 
