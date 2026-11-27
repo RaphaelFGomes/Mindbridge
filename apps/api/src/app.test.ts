@@ -77,6 +77,13 @@ describe('app (no database)', () => {
       });
     });
 
+    it("keeps a route's own caching, e.g. Swagger UI's static assets", async () => {
+      const response = await app.inject({ method: 'GET', url: '/docs/static/swagger-ui.css' });
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['cache-control']).not.toBe('no-store');
+      expect(response.headers['x-content-type-options']).toBe('nosniff');
+    });
+
     it('lets Swagger UI keep its own CSP so /docs still works', async () => {
       const response = await app.inject({ method: 'GET', url: '/docs' });
       expect(response.statusCode).toBe(200);
