@@ -17,6 +17,12 @@ test.describe('Accessibility', () => {
     await expectAccessible(page);
   });
 
+  test('list with an invalid filter', async ({ page }) => {
+    await page.goto('/memories?project=ZAP');
+    await expect(page.getByText('must be a normalized git remote')).toBeVisible();
+    await expectAccessible(page);
+  });
+
   test('new memory form, before and after a validation error', async ({ page }) => {
     await page.goto('/memories/new');
     await expectAccessible(page);

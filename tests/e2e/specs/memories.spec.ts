@@ -117,6 +117,21 @@ test.describe('Memories', () => {
     await expect(page.getByText('Page 2 of 2')).toBeVisible();
   });
 
+  test('explains an invalid project filter instead of failing', async ({ page }) => {
+    // Regression: OWASP ZAP found this exact URL returning a 500.
+    const response = await page.goto('/memories?global=include&project=ZAP&type=user');
+
+    expect(response?.status()).toBe(200);
+    await expect(field(page, 'Project')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByText('must be a normalized git remote')).toBeVisible();
+    await expect(page.getByText('No memories here yet')).toBeVisible();
+  });
+
+  test('the home page goes straight to the list', async ({ page }) => {
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/memories$/);
+  });
+
   test('shows a not-found page for unknown or malformed ids', async ({ page }) => {
     for (const id of [randomUUID(), 'not-an-id']) {
       await page.goto(`/memories/${id}`);
