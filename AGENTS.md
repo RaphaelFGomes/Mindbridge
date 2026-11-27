@@ -151,6 +151,11 @@ tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScri
   unique project key per test and run fully parallel.
 - **Supply chain:** dependency build scripts are denied by default
   (`allowBuilds` in `pnpm-workspace.yaml`); approve only with a reason.
+  pnpm also enforces `minimumReleaseAge` (7 days), `blockExoticSubdeps` and
+  `trustPolicy: no-downgrade`; Dependabot has a matching 7-day cooldown.
+  `minimumReleaseAgeExclude` lists exact versions locked before the policy
+  existed — **remove it after 2026-12-02**. Every GitHub Action is pinned to a
+  full commit SHA with the version in a comment (Dependabot bumps both).
 - **Auth:** `/v1/*` requires `Authorization: Bearer mb_…`, checked in an
   `onRequest` hook of the `/v1` scope (before validation). Keys live in
   `api_keys` as SHA-256 hashes, one per assistant, revocable; `/health`,
@@ -277,8 +282,13 @@ tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScri
 - 2026-11-27: v0.4 increment 4b — OWASP ZAP (web baseline + API active
   scan) and security headers (nonce CSP, cross-origin isolation, API
   no-store/CSP), with unit and E2E checks.
+- 2026-11-27: first ZAP + Semgrep triage. ZAP found a real bug (an invalid
+  project filter crashed the list page with a 500; now a field error, with a
+  regression test on the exact URL); 4 web false positives recorded in
+  `.zap/web-rules.tsv`. Semgrep's 34 findings were all supply-chain hardening:
+  SHA-pinned actions, Dependabot cooldown, pnpm release-age/trust policies.
 - **Next steps (v0.4):**
-  1. Push, triage the first ZAP findings (`.zap/*.tsv` only with a reason).
+  1. Push; confirm CI and Security are green.
   2. Stryker mutation testing (incremental on push, full on schedule).
   3. k6: smoke on push; load, stress and soak on schedule.
 
