@@ -1,0 +1,10 @@
+# Default gitleaks rules, plus Mindbridge's own API key format:
+# the fixed "mb_" prefix exists precisely so leaked keys can be detected.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "mindbridge-api-key"
+description = "Mindbridge API key"
+regex = '''mb_[A-Za-z0-9_-]{43}'''
+keywords = ["mb_"]

@@ -1,0 +1,7 @@
+name: Mindbridge CodeQL config
+queries:
+  - uses: security-extended
+paths-ignore:
+  - '**/generated/**'
+  - '**/dist/**'
+  - '**/.next/**'

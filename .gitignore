@@ -40,3 +40,6 @@ pnpm-debug.log*
 
 # Playwright sessions (contain API keys)
 .auth/
+
+# Security scan reports
+*.sarif
