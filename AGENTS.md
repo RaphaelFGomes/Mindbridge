@@ -199,6 +199,17 @@ tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScri
   findings. Run on push, PRs and weekly. No tool may open issues or comment on
   PRs (use CLIs, not bot-style actions). Dependabot PRs scan but skip the
   upload (read-only token). Triage findings: fix, or suppress with a reason.
+- **DAST:** the `dast` job runs OWASP ZAP against the running apps: a
+  signed-in baseline of the web UI (session cookie injected) and an active
+  API scan from `/openapi.json` (Bearer key injected). Any WARN fails; accept
+  false positives only in `.zap/*.tsv` with a reason. Findings: job summary +
+  HTML artifact (ZAP has no SARIF).
+- **Security headers:** web pages get a per-request nonce CSP from
+  `src/proxy.ts` (`lib/csp.ts`; dev-only relaxations for HMR), plus
+  COOP/COEP/CORP, Permissions-Policy, nosniff, DENY framing. API responses get
+  `default-src 'none'` CSP, nosniff, `no-store` and CORP unless a route sets
+  its own (Swagger UI keeps its `staticCSP`). The E2E suite fails on any CSP
+  violation in the browser console.
 - **Coverage:** the gate is `coverage.thresholds` in `apps/api/vitest.config.ts`
   (unit + integration combined). Codecov is reporting only: uploaded via OIDC
   (no token secret), `comment: false`, informational statuses. Raise the
@@ -263,11 +274,13 @@ tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScri
   mutation) on a daily schedule + manual dispatch.
 - 2026-11-27: v0.4 increment 4a — static security pipeline (CodeQL, Semgrep,
   gitleaks, Trivy).
+- 2026-11-27: v0.4 increment 4b — OWASP ZAP (web baseline + API active
+  scan) and security headers (nonce CSP, cross-origin isolation, API
+  no-store/CSP), with unit and E2E checks.
 - **Next steps (v0.4):**
-  1. Push, triage the first findings.
-  2. OWASP ZAP baseline (web) + API scan (OpenAPI) against running servers;
-     expect header hardening (CSP with nonces, API security headers).
-  3. Stryker mutation testing; 4. k6 load/stress/soak.
+  1. Push, triage the first ZAP findings (`.zap/*.tsv` only with a reason).
+  2. Stryker mutation testing (incremental on push, full on schedule).
+  3. k6: smoke on push; load, stress and soak on schedule.
 
 ## Working rules
 
