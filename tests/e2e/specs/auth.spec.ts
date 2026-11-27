@@ -14,6 +14,13 @@ test.describe('Signing in', () => {
     await expectAccessible(page);
   });
 
+  test('redirects to the login page with a typed body (ZAP 10019)', async ({ request }) => {
+    const redirect = await request.get('/memories', { maxRedirects: 0 });
+    expect(redirect.status()).toBe(307);
+    expect(redirect.headers().location).toMatch(/\/login\?next=%2Fmemories$/);
+    expect(redirect.headers()['content-type']).toMatch(/^text\/plain/);
+  });
+
   test('sends visitors to the login page and back to where they were going', async ({ page }) => {
     await page.goto('/memories?type=user');
     await expect(page).toHaveURL(/\/login\?next=/);

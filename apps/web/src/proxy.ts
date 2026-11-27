@@ -6,9 +6,21 @@ const SESSION_COOKIE = 'mindbridge_session';
 const PUBLIC_PATHS = ['/login'];
 
 /**
+ * Next.js writes the target URL as the redirect's body; declare it as text so no
+ * response goes out with a body but no Content-Type (OWASP ZAP rule 10019).
+ */
+function redirectTo(url: URL, csp: string) {
+  const response = NextResponse.redirect(url);
+  response.headers.set('content-type', 'text/plain; charset=utf-8');
+  response.headers.set('content-security-policy', csp);
+  return response;
+}
+
+/**
  * Runs before every page:
  * - sets a nonce-based Content-Security-Policy (Next.js reads the nonce from the
  *   request header and stamps its own scripts with it);
+ * - sends `/` to the list (a plain redirect, not a rendered page);
  * - sends visitors without a session to the login page, remembering where they
  *   were going. Only presence is checked: the API validates the key on every
  *   request, and pages redirect on their own if credentials are missing.
@@ -18,6 +30,8 @@ export function proxy(request: NextRequest) {
   const csp = contentSecurityPolicy(nonce, { development: process.env.NODE_ENV === 'development' });
   const { pathname, search } = request.nextUrl;
 
+  if (pathname === '/') return redirectTo(new URL('/memories', request.url), csp);
+
   const isPublic = PUBLIC_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`),
   );
@@ -26,9 +40,7 @@ export function proxy(request: NextRequest) {
     const login = new URL('/login', request.url);
     const target = `${pathname}${search}`;
     if (target !== '/') login.searchParams.set('next', target);
-    const redirect = NextResponse.redirect(login);
-    redirect.headers.set('content-security-policy', csp);
-    return redirect;
+    return redirectTo(login, csp);
   }
 
   const requestHeaders = new Headers(request.headers);

@@ -127,7 +127,13 @@ test.describe('Memories', () => {
     await expect(page.getByText('No memories here yet')).toBeVisible();
   });
 
-  test('the home page goes straight to the list', async ({ page }) => {
+  test('the home page goes straight to the list', async ({ page, request }) => {
+    const redirect = await request.get('/', { maxRedirects: 0 });
+    expect(redirect.status()).toBe(307);
+    expect(redirect.headers().location).toMatch(/\/memories$/);
+    // Next.js writes the target as a short body: it must declare its type (ZAP 10019).
+    expect(redirect.headers()['content-type']).toMatch(/^text\/plain/);
+
     await page.goto('/');
     await expect(page).toHaveURL(/\/memories$/);
   });
