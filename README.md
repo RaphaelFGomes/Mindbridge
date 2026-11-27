@@ -10,7 +10,7 @@ REST API or CLI.
 
 Mindbridge is also a **QA showcase**: every layer is covered by tests that run in CI.
 
-> **Status:** v0.1 in progress — REST API, database and the first test layers.
+> **Status:** v0.3 — REST API, MCP server and web UI, each with its own test layers in CI.
 
 ## Why
 
@@ -188,20 +188,20 @@ Errors use [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457)
 
 ## Testing
 
-| Type          | Tool                                                                         | Status  |
-| ------------- | ---------------------------------------------------------------------------- | ------- |
-| Unit          | Vitest (incl. HTTP-level tests via `app.inject`)                             | ✅      |
-| Integration   | Vitest + Testcontainers (real Postgres, no DB mocks)                         | ✅      |
-| API           | Playwright `request` + Schemathesis (OpenAPI-driven)                         | ✅      |
-| Contract      | Pact (Web ↔ API, CLI ↔ API)                                                  | Planned |
-| E2E           | Playwright: user flows, security checks, no-JavaScript fallbacks             | ✅      |
-| Visual        | Playwright screenshots (desktop + mobile), browser in the official container | ✅      |
-| Accessibility | axe-core (WCAG 2.2 AA) on every page and state, keyboard checks              | ✅      |
-| Performance   | k6 (load, stress, soak) with thresholds that fail CI                         | Planned |
-| Security      | CodeQL, Semgrep, gitleaks, Trivy, OWASP ZAP baseline                         | Planned |
-| Mutation      | Stryker                                                                      | Planned |
-| MCP           | Vitest + in-memory MCP transport; stdio end-to-end in Playwright             | ✅      |
-| AI evals      | promptfoo — does the AI retrieve the right memory via MCP?                   | Planned |
+| Type          | Tool                                                                                  | Status  |
+| ------------- | ------------------------------------------------------------------------------------- | ------- |
+| Unit          | Vitest (incl. HTTP-level tests via `app.inject`)                                      | ✅      |
+| Integration   | Vitest + Testcontainers (real Postgres, no DB mocks)                                  | ✅      |
+| API           | Playwright `request` + Schemathesis (OpenAPI-driven)                                  | ✅      |
+| Contract      | Pact (Web ↔ API, CLI ↔ API)                                                           | Planned |
+| E2E           | Playwright: user flows, security checks, no-JavaScript fallbacks                      | ✅      |
+| Visual        | Playwright screenshots (desktop + mobile), browser in the official container          | ✅      |
+| Accessibility | axe-core (WCAG 2.2 AA) on every page and state, keyboard checks                       | ✅      |
+| Performance   | k6 (load, stress, soak) with thresholds that fail CI                                  | Planned |
+| Security      | CodeQL, Semgrep, gitleaks (full history), Trivy → GitHub Security tab; OWASP ZAP next | ✅      |
+| Mutation      | Stryker                                                                               | Planned |
+| MCP           | Vitest + in-memory MCP transport; stdio end-to-end in Playwright                      | ✅      |
+| AI evals      | promptfoo — does the AI retrieve the right memory via MCP?                            | Planned |
 
 ```bash
 pnpm test               # unit
@@ -231,9 +231,9 @@ CI also fails when the Drizzle schema changes without a matching migration.
 
 ## Roadmap
 
-- **v0.1** — API + database + unit/integration/API tests + CI
-- **v0.2** — local MCP server (Claude Code and Copilot can connect)
-- **v0.3** — Web UI + E2E + accessibility + visual
+- ✅ **v0.1** — API + database + unit/integration/API tests + CI
+- ✅ **v0.2** — local MCP server (Claude Code and Copilot can connect)
+- ✅ **v0.3** — Web UI + E2E + accessibility + visual
 - **v0.4** — k6 + security pipeline + mutation testing
 - **v1.0** — deploy (remote MCP with OAuth → ChatGPT) + CLI on npm
 

@@ -193,6 +193,12 @@ tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScri
   is read from the installed `@playwright/test`. Mask anything that changes per
   run (dates, project keys); keep seeded names fixed. Update baselines only for
   intended UI changes, and review the PNG diffs before committing.
+- **Security scans** (`.github/workflows/security.yml`): CodeQL (JS/TS +
+  Actions, security-extended), Semgrep, gitleaks over the full history (with a
+  rule for `mb_` keys) and Trivy upload SARIF to the Security tab and fail on
+  findings. Run on push, PRs and weekly. No tool may open issues or comment on
+  PRs (use CLIs, not bot-style actions). Dependabot PRs scan but skip the
+  upload (read-only token). Triage findings: fix, or suppress with a reason.
 - **Coverage:** the gate is `coverage.thresholds` in `apps/api/vitest.config.ts`
   (unit + integration combined). Codecov is reporting only: uploaded via OIDC
   (no token secret), `comment: false`, informational statuses. Raise the
@@ -248,10 +254,20 @@ tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScri
 - 2026-11-26: v0.3 increment 3b — visual snapshots of every page (desktop +
   Pixel 7) with the browser in the official Playwright container; header now
   wraps on narrow screens.
-- **Next steps (v0.3):**
-  1. Generate and commit the first baselines locally; confirm CI matches them.
-  2. Close v0.3 (README roadmap), then plan v0.4 (k6, security pipeline,
-     mutation testing).
+- 2026-11-27: **v0.3 complete** — first CI comparison of locally generated
+  baselines: zero pixel difference. Visual review also fixed a raw Zod
+  message on blank names, filter alignment and mobile header wrapping.
+- **v0.4 decisions:** security findings go to the GitHub Security tab
+  (SARIF), never PR comments or issues. Heavy jobs: fast variants on every push
+  (k6 smoke ~30 s, incremental Stryker), full ones (stress, soak, full
+  mutation) on a daily schedule + manual dispatch.
+- 2026-11-27: v0.4 increment 4a — static security pipeline (CodeQL, Semgrep,
+  gitleaks, Trivy).
+- **Next steps (v0.4):**
+  1. Push, triage the first findings.
+  2. OWASP ZAP baseline (web) + API scan (OpenAPI) against running servers;
+     expect header hardening (CSP with nonces, API security headers).
+  3. Stryker mutation testing; 4. k6 load/stress/soak.
 
 ## Working rules
 
