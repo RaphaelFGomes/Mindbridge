@@ -4,10 +4,15 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Only propose versions published at least a week ago (time for compromises to surface).
+    cooldown:
+      default-days: 7
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     groups:
       dev-dependencies:
         dependency-type: development

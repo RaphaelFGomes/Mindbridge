@@ -11,3 +11,24 @@ peerDependencyRules:
   allowedVersions:
     # Only uses the stable TypeScript factory API to emit types; verified with TS 6.
     openapi-typescript>typescript: '6'
+# Supply-chain hardening (flagged by Semgrep):
+# wait a week before installing newly published versions (minutes),
+minimumReleaseAge: 10080
+# Exact versions already locked (and tested) when the policy was enabled on 2026-11-27.
+# They all mature by 2026-12-02; remove this list then.
+minimumReleaseAgeExclude:
+  - '@axe-core/playwright@4.14.1'
+  - '@fastify/error@4.3.0'
+  - '@types/react@19.3.3'
+  - caniuse-lite@1.0.30001828
+  - electron-to-chromium@1.5.494
+  - fast-json-stringify@7.3.9
+  - hono@4.13.22
+  - js-tokens@10.0.1
+  - lucide-react@1.80.0
+  - pkce-challenge@5.0.2
+  - undici@8.13.1
+# never pull transitive dependencies from git or tarball URLs,
+blockExoticSubdeps: true
+# and refuse a version whose publishing trust (e.g. provenance) got weaker than before.
+trustPolicy: no-downgrade
