@@ -3,6 +3,10 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   // No "X-Powered-By: Next.js" header.
   poweredByHeader: false,
+  // A bare redirect, not a rendered page (OWASP ZAP flagged the body of the old one).
+  redirects() {
+    return Promise.resolve([{ source: '/', destination: '/memories', permanent: false }]);
+  },
   headers() {
     return Promise.resolve([
       {

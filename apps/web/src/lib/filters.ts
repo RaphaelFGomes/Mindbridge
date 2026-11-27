@@ -1,4 +1,4 @@
-import type { ListQuery, MemoryType } from '@mindbridge/api-client';
+import { MindbridgeApiError, type ListQuery, type MemoryType } from '@mindbridge/api-client';
 
 export const MEMORY_TYPES = [
   'user',
@@ -59,4 +59,22 @@ export function pageHref(filters: Filters, page: number): string {
   if (page > 1) params.set('page', String(page));
   const query = params.toString();
   return query ? `/memories?${query}` : '/memories';
+}
+
+export interface FilterProblem {
+  /** Shown under the project field. */
+  project?: string;
+  /** Shown above the list when the problem is not about one field. */
+  message?: string;
+}
+
+/**
+ * Filters the API rejects (400, e.g. a project that is not a normalized git
+ * remote) become a message on the form instead of an error page. Anything else
+ * is rethrown.
+ */
+export function toFilterProblem(error: unknown): FilterProblem {
+  if (!(error instanceof MindbridgeApiError && error.status === 400)) throw error;
+  const project = error.fieldErrors.find((field) => field.path.split('.').pop() === 'project');
+  return project ? { project: project.message } : { message: error.message };
 }

@@ -6,7 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Field, Input, Select } from '@/components/ui/field';
 import { Notice } from '@/components/ui/notice';
 import { withApi } from '@/lib/api';
-import { MEMORY_TYPES, PAGE_SIZE, pageHref, parseFilters, toListQuery } from '@/lib/filters';
+import {
+  MEMORY_TYPES,
+  PAGE_SIZE,
+  pageHref,
+  parseFilters,
+  toFilterProblem,
+  toListQuery,
+  type FilterProblem,
+} from '@/lib/filters';
 import { formatDate } from '@/lib/utils';
 
 export const metadata: Metadata = { title: 'Memories' };
@@ -39,7 +47,15 @@ function MemoryItem({ memory }: { memory: Memory }) {
 export default async function MemoriesPage({ searchParams }: Props) {
   const params = await searchParams;
   const filters = parseFilters(params);
-  const { items, total } = await withApi((api) => api.list(toListQuery(filters)));
+  let items: Memory[] = [];
+  let total = 0;
+  let problem: FilterProblem = {};
+  try {
+    ({ items, total } = await withApi((api) => api.list(toListQuery(filters))));
+  } catch (error) {
+    // Found by OWASP ZAP: an invalid project filter used to crash the page with a 500.
+    problem = toFilterProblem(error);
+  }
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const newHref = filters.project
     ? `/memories/new?project=${encodeURIComponent(filters.project)}`
@@ -60,6 +76,7 @@ export default async function MemoriesPage({ searchParams }: Props) {
       </div>
 
       {params.deleted === '1' && <Notice>Memory deleted.</Notice>}
+      {problem.message && <Notice tone="error">{problem.message}</Notice>}
 
       <search>
         <form
@@ -67,7 +84,11 @@ export default async function MemoriesPage({ searchParams }: Props) {
           action="/memories"
           className="grid gap-4 rounded-lg border p-4 sm:grid-cols-4 sm:items-start"
         >
-          <Field id="filter-project" label="Project">
+          <Field
+            id="filter-project"
+            label="Project"
+            {...(problem.project && { error: problem.project })}
+          >
             {(control) => (
               <Input
                 {...control}

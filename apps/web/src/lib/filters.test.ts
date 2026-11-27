@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { pageHref, parseFilters, toListQuery } from './filters';
+import { MindbridgeApiError } from '@mindbridge/api-client';
+import { pageHref, parseFilters, toFilterProblem, toListQuery } from './filters';
 
 describe('parseFilters', () => {
   it('defaults to every memory, first page', () => {
@@ -64,5 +65,28 @@ describe('pageHref', () => {
     );
     expect(pageHref({ includeGlobal: true, page: 2 }, 1)).toBe('/memories');
     expect(pageHref({ includeGlobal: true, page: 1 }, 3)).toBe('/memories?page=3');
+  });
+});
+
+describe('toFilterProblem', () => {
+  it('puts a rejected project filter under the project field', () => {
+    const error = new MindbridgeApiError(400, 'VALIDATION_ERROR', 'The request is invalid.', [
+      { path: 'querystring.project', message: 'must be a normalized git remote' },
+    ]);
+    expect(toFilterProblem(error)).toEqual({ project: 'must be a normalized git remote' });
+  });
+
+  it('falls back to a general message for other invalid filters', () => {
+    const error = new MindbridgeApiError(400, 'VALIDATION_ERROR', 'The request is invalid.', [
+      { path: 'querystring.limit', message: 'too big' },
+    ]);
+    expect(toFilterProblem(error)).toEqual({ message: 'The request is invalid.' });
+  });
+
+  it.each([
+    ['a server error', new MindbridgeApiError(500, 'INTERNAL_ERROR', 'Boom')],
+    ['a redirect', new Error('NEXT_REDIRECT')],
+  ])('rethrows %s', (_case, error) => {
+    expect(() => toFilterProblem(error)).toThrow(error);
   });
 });
