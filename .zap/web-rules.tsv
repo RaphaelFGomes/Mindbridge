@@ -1,0 +1,2 @@
+# OWASP ZAP baseline rules for the web UI. Format: <rule id> TAB <IGNORE|INFO|WARN|FAIL> TAB <why>
+# Rules not listed here are WARN, and any WARN fails the job. Only ignore with a written reason.

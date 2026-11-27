@@ -119,3 +119,96 @@ jobs:
         with:
           sarif_file: trivy.sarif
           category: trivy
+
+  # Dynamic analysis: attacks the running web UI and API. ZAP reports URLs, not code
+  # lines (no SARIF), so findings go to the job summary plus an HTML artifact.
+  dast:
+    name: DAST (OWASP ZAP)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: mindbridge
+          POSTGRES_PASSWORD: mindbridge
+          POSTGRES_DB: mindbridge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mindbridge -d mindbridge"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      DATABASE_URL: postgres://mindbridge:mindbridge@localhost:5432/mindbridge
+      NEXT_TELEMETRY_DISABLED: '1'
+      # Official image; `stable` on purpose: new rules showing new findings is the point.
+      ZAP_IMAGE: ghcr.io/zaproxy/zaproxy:stable
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the API and the web app
+        run: pnpm turbo run build --filter=@mindbridge/api --filter=@mindbridge/web
+      - run: pnpm db:migrate
+      - name: Create an API key for the scan
+        working-directory: apps/api
+        run: |
+          key="$(node --import tsx src/scripts/keys.ts create --name ci-zap --quiet)"
+          echo "::add-mask::$key"
+          echo "ZAP_API_KEY=$key" >> "$GITHUB_ENV"
+      - name: Start the API and the web app (production mode)
+        run: |
+          (cd apps/api && HOST=127.0.0.1 PORT=4011 NODE_ENV=production LOG_LEVEL=warn nohup node dist/server.js > "$RUNNER_TEMP/api.log" 2>&1 &)
+          (cd apps/web && WEB_PORT=3011 MINDBRIDGE_API_URL=http://127.0.0.1:4011 MINDBRIDGE_API_KEY= nohup pnpm start > "$RUNNER_TEMP/web.log" 2>&1 &)
+          curl -sf --retry 30 --retry-connrefused --retry-delay 1 -o /dev/null http://127.0.0.1:4011/health
+          curl -sf --retry 30 --retry-connrefused --retry-delay 1 -o /dev/null http://127.0.0.1:3011/login
+      - name: Prepare the ZAP work folder
+        run: mkdir -p zap && cp .zap/*.tsv zap/ && chmod -R a+rwX zap
+      # The session cookie holds the API key, so the spider sees the signed-in pages.
+      - name: ZAP baseline, web UI (signed in)
+        run: >-
+          docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" "$ZAP_IMAGE"
+          zap-baseline.py -t http://127.0.0.1:3011/memories -c web-rules.tsv
+          -r zap-web.html -w zap-web.md
+          -z "-config replacer.full_list(0).description=session
+          -config replacer.full_list(0).enabled=true
+          -config replacer.full_list(0).matchtype=REQ_HEADER
+          -config replacer.full_list(0).matchstr=Cookie
+          -config replacer.full_list(0).regex=false
+          -config replacer.full_list(0).replacement=mindbridge_session=$ZAP_API_KEY"
+      # Active scan of every documented operation (injection, XSS, path traversal...).
+      - name: ZAP API scan, REST API (from the OpenAPI document)
+        if: ${{ !cancelled() }}
+        run: >-
+          docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" "$ZAP_IMAGE"
+          zap-api-scan.py -t http://127.0.0.1:4011/openapi.json -f openapi -c api-rules.tsv
+          -r zap-api.html -w zap-api.md
+          -z "-config replacer.full_list(0).description=auth
+          -config replacer.full_list(0).enabled=true
+          -config replacer.full_list(0).matchtype=REQ_HEADER
+          -config replacer.full_list(0).matchstr=Authorization
+          -config replacer.full_list(0).regex=false
+          -config replacer.full_list(0).replacement=Bearer $ZAP_API_KEY"
+      - name: Findings in the job summary
+        if: ${{ !cancelled() }}
+        run: |
+          for report in zap/zap-web.md zap/zap-api.md; do
+            if [ -f "$report" ]; then cat "$report" >> "$GITHUB_STEP_SUMMARY"; fi
+          done
+      # Reports may contain the run's throwaway API key (ephemeral database).
+      - name: Upload ZAP reports and server logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: zap-reports
+          path: |
+            zap/*.html
+            zap/*.md
+            ${{ runner.temp }}/*.log
+          retention-days: 14
