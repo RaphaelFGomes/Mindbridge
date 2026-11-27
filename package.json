@@ -18,6 +18,8 @@
     "test:coverage": "turbo run test:coverage",
     "test:api": "turbo run test:api",
     "test:e2e": "turbo run test:e2e",
+    "test:visual": "turbo run test:visual",
+    "visual:browser": "tests/e2e/scripts/visual-browser.sh",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

@@ -6,7 +6,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --project=signed-out --project=chromium --project=no-javascript",
+    "test:visual": "playwright test --project=visual-desktop --project=visual-mobile",
     "typecheck": "tsc --noEmit",
     "report": "playwright show-report reports/playwright"
   },

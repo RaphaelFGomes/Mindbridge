@@ -46,6 +46,11 @@
       "dependsOn": ["@mindbridge/api#build", "@mindbridge/web#build"],
       "cache": false,
       "passThroughEnv": ["DATABASE_URL", "CI", "E2E_*"]
+    },
+    "test:visual": {
+      "dependsOn": ["@mindbridge/api#build", "@mindbridge/web#build"],
+      "cache": false,
+      "passThroughEnv": ["DATABASE_URL", "CI", "E2E_*", "PW_*"]
     }
   }
 }

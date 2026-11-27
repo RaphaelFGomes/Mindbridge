@@ -5,11 +5,26 @@ const isCI = Boolean(process.env.CI);
 const port = (url: string) => new URL(url).port;
 
 /**
+ * Visual tests drive the browser inside the official Playwright container
+ * (scripts/visual-browser.sh), so screenshots are identical on macOS and CI.
+ * `<loopback>` makes 127.0.0.1 inside the container reach this machine.
+ */
+const containerBrowser = {
+  connectOptions: {
+    wsEndpoint: process.env.PW_SERVER_URL ?? 'ws://127.0.0.1:3100/',
+    exposeNetwork: '<loopback>',
+  },
+};
+
+/**
  * Starts the built API (:4011) and web app (:3011) unless E2E_WEB_URL points at
  * running ones. The web app runs in production mode (`next start`).
  */
 export default defineConfig({
   testDir: './specs',
+  // No OS suffix: rendering happens in the container, whatever the host.
+  snapshotPathTemplate: '{testDir}/__screenshots__/{projectName}/{arg}{ext}',
+  expect: { toHaveScreenshot: { animations: 'disabled', caret: 'hide', maxDiffPixels: 0 } },
   globalSetup: './global-setup.ts',
   globalTeardown: './global-teardown.ts',
   fullyParallel: true,
@@ -38,6 +53,18 @@ export default defineConfig({
       testMatch: /(memories|accessibility)\.spec\.ts/,
       dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'], storageState: sessionFile },
+    },
+    {
+      name: 'visual-desktop',
+      testMatch: /visual\.spec\.ts/,
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: sessionFile, ...containerBrowser },
+    },
+    {
+      name: 'visual-mobile',
+      testMatch: /visual\.spec\.ts/,
+      dependencies: ['setup'],
+      use: { ...devices['Pixel 7'], storageState: sessionFile, ...containerBrowser },
     },
     {
       name: 'no-javascript',
