@@ -137,7 +137,7 @@ jobs:
           retention-days: 14
 
   e2e:
-    name: E2E (Playwright + axe-core)
+    name: E2E, accessibility & visual (Playwright + axe-core)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -168,6 +168,13 @@ jobs:
         run: pnpm --filter @mindbridge/e2e exec playwright install --with-deps chromium
       # Builds the API and the web app, starts both on dedicated ports, signs in through the UI.
       - run: pnpm test:e2e
+      # Same container image as local runs, so screenshots match the committed baselines.
+      - name: Start the visual-testing browser (official Playwright container)
+        if: ${{ !cancelled() }}
+        run: pnpm visual:browser
+      - name: Visual snapshots
+        if: ${{ !cancelled() }}
+        run: pnpm test:visual
       - name: Upload E2E report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
