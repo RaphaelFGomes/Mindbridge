@@ -1,2 +1,6 @@
 # OWASP ZAP baseline rules for the web UI. Format: <rule id> TAB <IGNORE|INFO|WARN|FAIL> TAB <why>
 # Rules not listed here are WARN, and any WARN fails the job. Only ignore with a written reason.
+10031	IGNORE	(User controllable attribute: by design, forms re-render the submitted values after a validation error (and ?project= pre-fills the new-memory form). React escapes attribute values, and the nonce CSP blocks injected scripts.)
+10049	IGNORE	(Non-storable content: intended. Signed-in pages carry memories and are sent private, no-store.)
+10109	IGNORE	(Modern web application: informational hint to use the Ajax spider, not a vulnerability.)
+10202	IGNORE	(Anti-CSRF tokens: Next.js Server Actions reject requests whose Origin does not match the Host, the session cookie is SameSite=Strict, and the GET filter form has no side effects.)

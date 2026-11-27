@@ -31,13 +31,13 @@ jobs:
       matrix:
         language: [javascript-typescript, actions]
     steps:
-      - uses: actions/checkout@v7
-      - uses: github/codeql-action/init@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: github/codeql-action/init@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
         with:
           languages: ${{ matrix.language }}
           build-mode: none
           config-file: ./.github/codeql/codeql-config.yml
-      - uses: github/codeql-action/analyze@v4
+      - uses: github/codeql-action/analyze@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
         with:
           category: /language:${{ matrix.language }}
           # Dependabot PRs get a read-only token: analyse, but don't upload.
@@ -51,19 +51,20 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Runs as the runner's user (reports aren't root-owned); that user has no home
-      # in the image, and Semgrep needs one for its settings and logs.
+      # in the image, and Semgrep needs one for its settings and logs. Findings are
+      # printed in the log and written as SARIF for the Security tab.
       - name: Scan
         run: >-
           docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/src" -w /src
           semgrep/semgrep:1.187.0
           semgrep scan --metrics off --error
           --config p/default --config p/typescript --config p/nodejs --config p/react
-          --sarif --output semgrep.sarif
+          --sarif-output semgrep.sarif
       - name: Upload findings
         if: ${{ !cancelled() && github.actor != 'dependabot[bot]' && hashFiles('semgrep.sarif') != '' }}
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
         with:
           sarif_file: semgrep.sarif
           category: semgrep
@@ -76,7 +77,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Scan every commit
@@ -87,7 +88,7 @@ jobs:
           --report-format sarif --report-path /repo/gitleaks.sarif
       - name: Upload findings
         if: ${{ !cancelled() && github.actor != 'dependabot[bot]' && hashFiles('gitleaks.sarif') != '' }}
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
         with:
           sarif_file: gitleaks.sarif
           category: gitleaks
@@ -100,9 +101,9 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Scan the lockfile and config
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -115,7 +116,7 @@ jobs:
           exit-code: '1'
       - name: Upload findings
         if: ${{ !cancelled() && github.actor != 'dependabot[bot]' && hashFiles('trivy.sarif') != '' }}
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
         with:
           sarif_file: trivy.sarif
           category: trivy
@@ -146,9 +147,9 @@ jobs:
       # Official image; `stable` on purpose: new rules showing new findings is the point.
       ZAP_IMAGE: ghcr.io/zaproxy/zaproxy:stable
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -204,7 +205,7 @@ jobs:
       # Reports may contain the run's throwaway API key (ephemeral database).
       - name: Upload ZAP reports and server logs
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: zap-reports
           path: |
