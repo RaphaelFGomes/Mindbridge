@@ -6,7 +6,7 @@ export const KEBAB_CASE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export function slugSchema(max: number) {
   return z
     .string()
-    .min(1)
+    .min(1, { error: 'must not be blank' })
     .max(max)
     .regex(KEBAB_CASE, { error: 'must be kebab-case (e.g. "prefers-pnpm")' });
 }
