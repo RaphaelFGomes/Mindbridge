@@ -26,7 +26,9 @@ function MemoryItem({ memory }: { memory: Memory }) {
           {memory.name}
         </Link>
         <TypeBadge type={memory.type} />
-        <span className="text-xs text-muted-foreground">{memory.project ?? 'global'}</span>
+        <span className="font-mono text-xs text-muted-foreground">
+          {memory.project ?? 'global'}
+        </span>
       </div>
       <p className="text-sm">{memory.description}</p>
       <p className="text-xs text-muted-foreground">Updated {formatDate(memory.updatedAt)}</p>
@@ -63,7 +65,7 @@ export default async function MemoriesPage({ searchParams }: Props) {
         <form
           method="get"
           action="/memories"
-          className="grid gap-4 rounded-lg border p-4 sm:grid-cols-4 sm:items-end"
+          className="grid gap-4 rounded-lg border p-4 sm:grid-cols-4 sm:items-start"
         >
           <Field id="filter-project" label="Project">
             {(control) => (
@@ -99,7 +101,8 @@ export default async function MemoriesPage({ searchParams }: Props) {
               </Select>
             )}
           </Field>
-          <div className="flex gap-2">
+          {/* sm:mt-6.5 = label height + gap, so the buttons line up with the controls. */}
+          <div className="flex gap-2 sm:mt-6.5">
             <Button type="submit">Apply</Button>
             <Button asChild variant="outline">
               <Link href="/memories">Reset</Link>

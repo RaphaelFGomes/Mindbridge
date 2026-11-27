@@ -39,7 +39,7 @@ export default async function MemoryPage({ params, searchParams }: Props) {
 
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt className="text-muted-foreground">Scope</dt>
-        <dd>{memory.project ?? 'global'}</dd>
+        <dd className="font-mono">{memory.project ?? 'global'}</dd>
         <dt className="text-muted-foreground">Created</dt>
         <dd>{formatDate(memory.createdAt)}</dd>
         <dt className="text-muted-foreground">Updated</dt>

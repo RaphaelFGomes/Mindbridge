@@ -164,7 +164,7 @@ export function MemoryForm({ action, memory, defaultProject, cancelHref }: Memor
         </fieldset>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Scope: {memory.project ?? 'global'} (cannot be changed)
+          Scope: <code className="font-mono">{memory.project ?? 'global'}</code> (cannot be changed)
         </p>
       )}
 

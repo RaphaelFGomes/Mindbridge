@@ -25,7 +25,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           Skip to content
         </a>
         <header className="border-b">
-          <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
             <Link
               href={signedIn ? '/memories' : '/login'}
               className="rounded-sm text-lg font-semibold focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
@@ -33,7 +33,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               Mindbridge
             </Link>
             {signedIn && (
-              <nav aria-label="Main" className="flex items-center gap-2">
+              <nav aria-label="Main" className="flex flex-wrap items-center gap-2">
                 <Button asChild variant="ghost" size="sm">
                   <Link href="/memories">Memories</Link>
                 </Button>
