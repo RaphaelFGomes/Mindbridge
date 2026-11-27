@@ -50,7 +50,7 @@ export default defineConfig({
     },
     {
       name: 'chromium',
-      testMatch: /(memories|accessibility)\.spec\.ts/,
+      testMatch: /(memories|accessibility|security-headers)\.spec\.ts/,
       dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'], storageState: sessionFile },
     },
