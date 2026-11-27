@@ -10,6 +10,7 @@ import {
 import type { Database } from './db/client.js';
 import { registerErrorHandling } from './errors.js';
 import { trackAllowedMethods } from './method-not-allowed.js';
+import { registerSecurityHeaders } from './security-headers.js';
 import { ApiKeyRepository, type ApiKeyStore } from './modules/api-keys/api-key.repository.js';
 import { requireApiKey } from './modules/api-keys/auth.js';
 import { MemoryRepository } from './modules/memories/memory.repository.js';
@@ -35,6 +36,7 @@ export async function buildApp({
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   registerErrorHandling(app);
+  registerSecurityHeaders(app);
   app.decorateRequest('apiKey', null);
   const registerMethodNotAllowed = trackAllowedMethods(app);
 
@@ -63,7 +65,8 @@ export async function buildApp({
     },
     transform: jsonSchemaTransform,
   });
-  await app.register(fastifySwaggerUi, { routePrefix: '/docs' });
+  // staticCSP: Swagger UI sends its own CSP (with hashes for its inline code).
+  await app.register(fastifySwaggerUi, { routePrefix: '/docs', staticCSP: true });
   app.get('/openapi.json', { schema: { hide: true } }, () => app.swagger());
 
   await app.register(healthRoutes, { db });

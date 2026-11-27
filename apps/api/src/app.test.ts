@@ -61,6 +61,31 @@ describe('app (no database)', () => {
     }
   });
 
+  describe('security headers', () => {
+    it.each([
+      ['a public JSON route', { method: 'GET' as const, url: '/openapi.json' }],
+      ['a problem response', { method: 'GET' as const, url: '/v1/nope' }],
+      ['an unauthenticated /v1 request', { method: 'GET' as const, url: '/v1/memories' }],
+    ])('hardens %s', async (_case, request) => {
+      const response = await app.inject(request);
+      expect(response.headers).toMatchObject({
+        'x-content-type-options': 'nosniff',
+        'referrer-policy': 'no-referrer',
+        'cross-origin-resource-policy': 'same-origin',
+        'content-security-policy': "default-src 'none'; frame-ancestors 'none'",
+        'cache-control': 'no-store',
+      });
+    });
+
+    it('lets Swagger UI keep its own CSP so /docs still works', async () => {
+      const response = await app.inject({ method: 'GET', url: '/docs' });
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['content-type']).toMatch(/^text\/html/);
+      expect(response.headers['content-security-policy']).toContain("default-src 'self'");
+      expect(response.headers['x-content-type-options']).toBe('nosniff');
+    });
+  });
+
   it('answers unknown routes with a 404 problem', async () => {
     const response = await app.inject({ method: 'GET', url: '/v1/nope' });
     expect(response.statusCode).toBe(404);
