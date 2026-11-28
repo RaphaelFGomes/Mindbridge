@@ -199,7 +199,7 @@ Errors use [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457)
 | Accessibility | axe-core (WCAG 2.2 AA) on every page and state, keyboard checks                                | ✅      |
 | Performance   | k6 (load, stress, soak) with thresholds that fail CI                                           | Planned |
 | Security      | CodeQL, Semgrep, gitleaks, Trivy → Security tab; OWASP ZAP (web + API) against running servers | ✅      |
-| Mutation      | Stryker                                                                                        | Planned |
+| Mutation      | Stryker on every push: 100% mutation score on every package (unit tests)                       | ✅      |
 | MCP           | Vitest + in-memory MCP transport; stdio end-to-end in Playwright                               | ✅      |
 | AI evals      | promptfoo — does the AI retrieve the right memory via MCP?                                     | Planned |
 
@@ -207,6 +207,7 @@ Errors use [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457)
 pnpm test               # unit
 pnpm test:integration   # integration (needs Docker)
 pnpm test:coverage      # unit + integration with coverage (needs Docker)
+pnpm test:mutation      # Stryker: do the tests catch injected bugs? (about 3 minutes)
 pnpm db:up && pnpm test:api   # black-box API tests against the built server
 pnpm db:up && pnpm test:e2e   # browser E2E + axe (first: pnpm --filter @mindbridge/e2e exec playwright install chromium)
 pnpm visual:browser && pnpm test:visual   # screenshots; add -- --update-snapshots after an intended UI change

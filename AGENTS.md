@@ -121,6 +121,7 @@ tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScri
 | `pnpm --filter @mindbridge/api openapi:export` then `pnpm --filter @mindbridge/api-client generate` | After an API change: refresh `openapi.json` and the client types (CI fails if stale)                                                                                          |
 | `pnpm test:e2e`                                                                                     | Browser E2E + accessibility (needs `pnpm db:up`; builds and starts API :4011 + web :3011)                                                                                     |
 | `pnpm visual:browser` then `pnpm test:visual`                                                       | Visual snapshots; the browser runs in the official Playwright container (`-- --update-snapshots` to accept an intended change, then commit `tests/e2e/specs/__screenshots__`) |
+| `pnpm test:mutation`                                                                                | Stryker on the unit tests of every package; reports in `*/reports/mutation/`                                                                                                  |
 | `pnpm keys:create --name <n>` / `keys:list` / `keys:revoke <n>`                                     | Manage API keys (plaintext shown once)                                                                                                                                        |
 | `pnpm lint` / `pnpm typecheck` / `pnpm format:check`                                                | Static checks                                                                                                                                                                 |
 | `pnpm --filter @mindbridge/api db:generate`                                                         | New migration after a schema change                                                                                                                                           |
@@ -215,6 +216,13 @@ tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScri
   `default-src 'none'` CSP, nosniff, `no-store` and CORP unless a route sets
   its own (Swagger UI keeps its `staticCSP`). The E2E suite fails on any CSP
   violation in the browser console.
+- **Mutation testing (Stryker):** every package runs a full mutation pass
+  on its unit tests in CI (`mutation.yml`) and fails below `break: 100`. A
+  surviving mutant means a missing test, or redundant code to simplify. Only a
+  truly equivalent mutant gets `// Stryker disable next-line <mutator>: <reason>`.
+  The API mutates only what unit tests reach (database code is covered by
+  integration tests). Incremental mode is off: it kept stale results. Plugins
+  are listed explicitly because pnpm hides them from Stryker's discovery.
 - **Coverage:** the gate is `coverage.thresholds` in `apps/api/vitest.config.ts`
   (unit + integration combined). Codecov is reporting only: uploaded via OIDC
   (no token secret), `comment: false`, informational statuses. Raise the
@@ -287,10 +295,14 @@ tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScri
   regression test on the exact URL); 4 web false positives recorded in
   `.zap/web-rules.tsv`. Semgrep's 34 findings were all supply-chain hardening:
   SHA-pinned actions, Dependabot cooldown, pnpm release-age/trust policies.
+- 2026-11-28: v0.4 increment 4c — Stryker mutation testing. First scores
+  (85.7 / 63.6 / 86.9 / 68.0 for api-client / mcp / web / api) despite ~99%
+  line coverage; now 100% everywhere after new tests (tool contracts, regex
+  boundaries, error mapping, log behaviour, OpenAPI = committed file) and
+  simplifying redundant code the survivors exposed.
 - **Next steps (v0.4):**
-  1. Push; confirm CI and Security are green.
-  2. Stryker mutation testing (incremental on push, full on schedule).
-  3. k6: smoke on push; load, stress and soak on schedule.
+  1. Push; confirm the Mutation workflow is green.
+  2. k6: smoke on push; load, stress and soak on schedule.
 
 ## Working rules
 
