@@ -1,0 +1,91 @@
+name: Performance
+
+# Load, stress and soak take 7 to 32 minutes each: too slow for every push (CI
+# runs the 30-second smoke instead). They run daily and on demand, each against
+# its own API and database so the numbers don't interfere.
+on:
+  schedule:
+    - cron: '41 4 * * *'
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: Which test to run
+        type: choice
+        options: [all, load, stress, soak]
+        default: all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  k6:
+    name: k6 ${{ matrix.scenario }}
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ matrix.scenario == 'soak' && 45 || 20 }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Scheduled runs have no inputs: run everything.
+        scenario: ${{ fromJSON((inputs.scenario || 'all') == 'all' && '["load","stress","soak"]' || format('["{0}"]', inputs.scenario)) }}
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: mindbridge
+          POSTGRES_PASSWORD: mindbridge
+          POSTGRES_DB: mindbridge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mindbridge -d mindbridge"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      DATABASE_URL: postgres://mindbridge:mindbridge@localhost:5432/mindbridge
+      API_URL: http://127.0.0.1:4010
+      SCENARIO: ${{ matrix.scenario }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @mindbridge/api build
+      - run: pnpm db:migrate
+      - name: Create an API key for this run
+        working-directory: apps/api
+        run: |
+          key="$(node --import tsx src/scripts/keys.ts create --name "ci-k6-$SCENARIO" --quiet)"
+          echo "::add-mask::$key"
+          echo "MINDBRIDGE_API_KEY=$key" >> "$GITHUB_ENV"
+      - name: Start the API
+        env:
+          HOST: 127.0.0.1
+          PORT: '4010'
+          NODE_ENV: production
+          # Request logs at this volume would measure the disk, not the API.
+          LOG_LEVEL: warn
+        run: |
+          nohup node apps/api/dist/server.js > api.log 2>&1 &
+          curl --silent --show-error --fail --retry 30 --retry-connrefused --retry-delay 1 "$API_URL/health"
+      - uses: grafana/setup-k6-action@c47136d33d365efbeb9ae7266908b5dcf98cdece # v1.3.0
+        with:
+          k6-version: '2.4.0'
+      - name: k6 ${{ matrix.scenario }}
+        run: pnpm --filter @mindbridge/performance "$SCENARIO"
+      - name: Upload k6 reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: k6-${{ matrix.scenario }}
+          path: |
+            tests/performance/reports/
+            api.log
+          retention-days: 14

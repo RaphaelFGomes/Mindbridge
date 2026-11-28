@@ -116,6 +116,13 @@ jobs:
           curl --silent --show-error --fail --retry 30 --retry-connrefused --retry-delay 1 "$API_URL/health"
       - name: Playwright API tests (black-box, contract-checked)
         run: pnpm test:api
+      - uses: grafana/setup-k6-action@c47136d33d365efbeb9ae7266908b5dcf98cdece # v1.3.0
+        if: ${{ !cancelled() }}
+        with:
+          k6-version: '2.4.0'
+      - name: k6 smoke (latency and error thresholds)
+        if: ${{ !cancelled() }}
+        run: pnpm --filter @mindbridge/performance smoke
       - name: Schemathesis (OpenAPI-driven fuzzing)
         if: ${{ !cancelled() }}
         run: >-
@@ -132,6 +139,7 @@ jobs:
           name: api-test-reports
           path: |
             tests/api/reports/
+            tests/performance/reports/
             reports/schemathesis/
             api.log
           retention-days: 14
