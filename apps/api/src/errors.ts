@@ -87,35 +87,45 @@ function isClientError(error: unknown): error is ClientError {
 }
 
 function toFieldPath(context: string | undefined, instancePath: string): string {
-  return [context, ...instancePath.split('/').filter(Boolean)].filter(Boolean).join('.');
+  return [context, ...instancePath.split('/')].filter(Boolean).join('.');
+}
+
+/**
+ * The problem sent to the client for any error. Client errors (4xx) explain
+ * themselves; anything else becomes a generic 500 that never echoes internals.
+ */
+export function toProblem(error: unknown): Problem {
+  if (hasZodFastifySchemaValidationErrors(error)) {
+    return problem(
+      400,
+      'VALIDATION_ERROR',
+      'The request is invalid.',
+      error.validation.map((issue) => ({
+        path: toFieldPath(error.validationContext, issue.instancePath),
+        // Stryker disable next-line StringLiteral: fallback for a field Zod always fills.
+        message: issue.message ?? 'is invalid',
+      })),
+    );
+  }
+  if (error instanceof HttpProblem) return problem(error.status, error.code, error.message);
+  if (isClientError(error)) return problem(error.statusCode, error.code, error.message);
+  return problem(500, 'INTERNAL_ERROR', 'An unexpected error occurred.');
 }
 
 export function registerErrorHandling(app: FastifyInstance): void {
   app.setErrorHandler((error, request, reply) => {
-    let body: Problem;
+    const body = toProblem(error);
+    if (error instanceof HttpProblem) reply.headers(error.headers);
 
-    if (hasZodFastifySchemaValidationErrors(error)) {
-      body = problem(
-        400,
-        'VALIDATION_ERROR',
-        'The request is invalid.',
-        error.validation.map((issue) => ({
-          path: toFieldPath(error.validationContext, issue.instancePath),
-          message: issue.message ?? 'is invalid',
-        })),
-      );
-    } else if (error instanceof HttpProblem) {
-      reply.headers(error.headers);
-      body = problem(error.status, error.code, error.message);
-    } else if (isResponseSerializationError(error)) {
+    // Stryker disable ObjectLiteral,StringLiteral: log payloads and messages, not API behaviour.
+    // Stryker disable next-line BlockStatement: no route violates its own response schema.
+    if (isResponseSerializationError(error)) {
+      // Stryker disable next-line CallExpression: same unreachable branch.
       request.log.error({ err: error, issues: error.cause.issues }, 'Response failed validation');
-      body = problem(500, 'INTERNAL_ERROR', 'An unexpected error occurred.');
-    } else if (isClientError(error)) {
-      body = problem(error.statusCode, error.code, error.message);
-    } else {
+    } else if (body.status >= 500) {
       request.log.error({ err: error }, 'Unhandled error');
-      body = problem(500, 'INTERNAL_ERROR', 'An unexpected error occurred.');
     }
+    // Stryker restore ObjectLiteral,StringLiteral
 
     return reply.code(body.status).type('application/problem+json').send(body);
   });

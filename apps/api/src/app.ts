@@ -27,6 +27,7 @@ export interface AppOptions {
 
 export async function buildApp({
   db,
+  // Stryker disable next-line BooleanLiteral: logging only.
   logger = false,
   apiKeys = new ApiKeyRepository(db),
 }: AppOptions) {
@@ -37,6 +38,7 @@ export async function buildApp({
   app.setSerializerCompiler(serializerCompiler);
   registerErrorHandling(app);
   registerSecurityHeaders(app);
+  // Stryker disable next-line StringLiteral,CallExpression: only shapes request objects (V8 performance); the hook assigns the property either way.
   app.decorateRequest('apiKey', null);
   const registerMethodNotAllowed = trackAllowedMethods(app);
 

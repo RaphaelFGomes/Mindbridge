@@ -69,6 +69,7 @@ export function toFormState(error: unknown, values: FormValues): FormState {
   }
   const fieldErrors: FormState['fieldErrors'] = {};
   for (const { path, message } of error.fieldErrors) {
+    // Stryker disable next-line Regex,StringLiteral: equivalent — API paths only start with "body.", and split() always yields a first element.
     const field = path.replace(/^body\./, '').split('.')[0] ?? '';
     if (isField(field)) fieldErrors[field] ??= message;
   }

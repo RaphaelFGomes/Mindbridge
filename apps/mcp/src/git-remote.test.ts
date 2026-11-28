@@ -19,6 +19,10 @@ describe('normalizeGitRemote', () => {
     ['https://dev.azure.com/acme/widgets/_git/api', 'dev.azure.com/acme/widgets/_git/api'],
     ['git@bitbucket.org:acme/my_repo.js.git', 'bitbucket.org/acme/my_repo.js'],
     ['  git@github.com:acme/widgets.git\n', 'github.com/acme/widgets'],
+    // Each case pins down part of the parsing (optional user, trailing slashes, .git suffix only).
+    ['github.com:acme/widgets.git', 'github.com/acme/widgets'],
+    ['https://github.com/acme/widgets.git//', 'github.com/acme/widgets'],
+    ['git@github.com:acme/acme.github.io.git', 'github.com/acme/acme.github.io'],
   ])('%s → %s', (remote, key) => {
     expect(normalizeGitRemote(remote)).toBe(key);
   });
@@ -35,6 +39,9 @@ describe('normalizeGitRemote', () => {
     '/home/me/repos/widgets',
     'file:///srv/git/widgets.git',
     'https://github.com/',
+    'some/path:repo',
+    'https://github.com/acme/my%20repo',
+    'git@github.com:acme/widgets\nrm -rf',
   ])('returns null for %j', (remote) => {
     expect(normalizeGitRemote(remote)).toBeNull();
   });

@@ -34,8 +34,17 @@ describe('payloads', () => {
     expect(toNewMemory({ ...values, scope: 'global' }).project).toBeNull();
   });
 
-  it('never sends the project when editing (it cannot change)', () => {
-    expect(toMemoryPatch(values)).not.toHaveProperty('project');
+  it('sends only the editable fields when editing (the project cannot change)', () => {
+    expect(toMemoryPatch(values)).toEqual({
+      type: 'feedback',
+      name: 'prefers-pnpm',
+      description: 'Use pnpm',
+      content: 'The team uses pnpm.',
+    });
+  });
+
+  it('reads every field, including the scope', () => {
+    expect(values).toMatchObject({ scope: 'project', project: ' GitHub.com/Acme/Widgets ' });
   });
 
   it('reads missing fields as empty strings, and files as empty', () => {
@@ -63,7 +72,11 @@ describe('toFormState', () => {
 
   it('explains a duplicate name on the name field', () => {
     const state = toFormState(new MindbridgeApiError(409, 'CONFLICT', 'exists'), values);
-    expect(state.fieldErrors?.name).toMatch(/already exists/);
+    expect(state).toEqual({
+      values,
+      message: 'Please fix the highlighted field.',
+      fieldErrors: { name: 'A memory with this name already exists in this scope.' },
+    });
   });
 
   it('falls back to the API message when no field is involved', () => {

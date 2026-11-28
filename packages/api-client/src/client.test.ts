@@ -33,10 +33,11 @@ const client = (fake: ReturnType<typeof fakeFetch>) =>
   createApiClient({ baseUrl: 'http://api.test', apiKey: KEY, fetch: fake.fetch });
 
 describe('createApiClient', () => {
-  it('sends the API key as a bearer token', async () => {
+  it('sends the API key as a bearer token and asks for JSON', async () => {
     const fake = fakeFetch(json(200, memory('a')));
     await client(fake).get('a');
     expect(fake.requests[0]?.headers.get('authorization')).toBe(`Bearer ${KEY}`);
+    expect(fake.requests[0]?.headers.get('accept')).toBe('application/json');
     expect(new URL(fake.requests[0]?.url ?? '').pathname).toBe('/v1/memories/a');
   });
 
@@ -115,6 +116,7 @@ describe('errors', () => {
     );
 
     expect(error).toBeInstanceOf(MindbridgeApiError);
+    expect(error.name).toBe('MindbridgeApiError');
     expect(error).toMatchObject({
       status: 400,
       code: 'VALIDATION_ERROR',
@@ -132,6 +134,18 @@ describe('errors', () => {
       }),
     );
     expect(error).toMatchObject({ status: 502, code: 'HTTP_502', message: 'Bad Gateway' });
+  });
+
+  it('treats an empty error response as a failure, not a success', async () => {
+    // openapi-fetch returns no `error` for bodiless responses: the status alone must count.
+    const error = await failing(
+      new Response(null, {
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: { 'content-length': '0' },
+      }),
+    );
+    expect(error).toMatchObject({ status: 503, code: 'HTTP_503', message: 'Service Unavailable' });
   });
 
   it('reports an unreachable API with its URL', async () => {

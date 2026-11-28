@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { describeFailure } from './cli.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describeFailure, runCli } from './cli.js';
 
 describe('describeFailure', () => {
   it('turns an unreachable database into an instruction', () => {
@@ -24,5 +24,24 @@ describe('describeFailure', () => {
 
   it('describes non-error values', () => {
     expect(describeFailure('plain failure')).toBe('plain failure');
+  });
+});
+
+describe('runCli', () => {
+  afterEach(() => {
+    process.exitCode = undefined;
+    vi.restoreAllMocks();
+  });
+
+  it('leaves the exit code alone when the command succeeds', async () => {
+    await runCli(() => Promise.resolve());
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  it('prints one safe line and exits 1 when the command fails', async () => {
+    const stderr = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await runCli(() => Promise.reject(new Error('Failed query: x\nparams: mb_secret')));
+    expect(stderr).toHaveBeenCalledExactlyOnceWith('Failed query: x');
+    expect(process.exitCode).toBe(1);
   });
 });

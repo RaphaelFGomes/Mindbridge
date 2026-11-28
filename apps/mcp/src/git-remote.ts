@@ -20,7 +20,9 @@ export function normalizeGitRemote(remote: string): string | null {
   // scp-like syntax: [user@]host:path (no scheme)
   const scp = /^(?:[^@/\s]+@)?([^:/\s]+):(?!\/\/)(.+)$/.exec(value);
   if (scp && !value.includes('://')) {
+    // Stryker disable next-line StringLiteral: unreachable — both groups always match.
     host = scp[1] ?? '';
+    // Stryker disable next-line StringLiteral: unreachable — both groups always match.
     path = scp[2] ?? '';
   } else {
     let url: URL;

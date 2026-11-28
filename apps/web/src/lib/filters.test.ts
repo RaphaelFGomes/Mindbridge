@@ -29,6 +29,8 @@ describe('parseFilters', () => {
     ['page zero', { page: '0' }],
     ['a negative page', { page: '-2' }],
     ['a non-numeric page', { page: 'last' }],
+    ['a fractional page', { page: '1.5' }],
+    ['a blank page', { page: ' ' }],
   ])('ignores %s', (_case, params) => {
     expect(parseFilters(params)).toEqual({ includeGlobal: true, page: 1 });
   });
@@ -39,6 +41,14 @@ describe('parseFilters', () => {
 });
 
 describe('toListQuery', () => {
+  it('passes the type filter through', () => {
+    expect(toListQuery({ type: 'reference', includeGlobal: true, page: 1 })).toEqual({
+      type: 'reference',
+      limit: 20,
+      offset: 0,
+    });
+  });
+
   it('sends includeGlobal only with a project, and pages by 20', () => {
     expect(toListQuery({ includeGlobal: true, page: 1 })).toEqual({ limit: 20, offset: 0 });
     expect(

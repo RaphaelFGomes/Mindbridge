@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp, type App } from './app.js';
 import { createDatabase } from './db/client.js';
@@ -29,6 +30,15 @@ describe('app (no database)', () => {
   afterAll(async () => {
     await app.close();
     await database.close();
+  });
+
+  it('serves exactly the committed OpenAPI document (the contract clients are generated from)', async () => {
+    // Regenerate after an intended API change: pnpm --filter @mindbridge/api openapi:export
+    const committed: unknown = JSON.parse(
+      readFileSync(new URL('../openapi.json', import.meta.url), 'utf8'),
+    );
+    const response = await app.inject({ method: 'GET', url: '/openapi.json' });
+    expect(response.json()).toEqual(committed);
   });
 
   it('serves an OpenAPI 3.1 document describing the public routes', async () => {
@@ -97,7 +107,25 @@ describe('app (no database)', () => {
     const response = await app.inject({ method: 'GET', url: '/v1/nope' });
     expect(response.statusCode).toBe(404);
     expect(response.headers['content-type']).toMatch(/^application\/problem\+json/);
-    expect(response.json()).toMatchObject({ status: 404, code: 'ROUTE_NOT_FOUND' });
+    expect(response.json()).toMatchObject({
+      status: 404,
+      code: 'ROUTE_NOT_FOUND',
+      detail: 'Route GET /v1/nope not found.',
+    });
+  });
+
+  it('does not advertise hidden routes through 405 answers', async () => {
+    // /openapi.json is hidden from the document: other methods are simply unknown.
+    const response = await app.inject({ method: 'POST', url: '/openapi.json' });
+    expect(response.statusCode).toBe(404);
+  });
+
+  it('explains a 405 as a problem document', async () => {
+    const response = await app.inject({ method: 'PUT', url: '/v1/memories' });
+    expect(response.headers['content-type']).toMatch(/^application\/problem\+json/);
+    expect(response.json()).toMatchObject({
+      detail: 'PUT is not supported on /v1/memories. Allowed: GET, POST.',
+    });
   });
 
   it.each([
@@ -152,6 +180,7 @@ describe('app (no database)', () => {
       title: 'Bad Request',
       status: 400,
       code: 'VALIDATION_ERROR',
+      detail: 'The request is invalid.',
       errors: expect.arrayContaining([
         expect.objectContaining({ path: 'body.type' }),
         expect.objectContaining({ path: 'body.name' }),
@@ -268,6 +297,51 @@ describe('app (no database)', () => {
         await unchecked.close();
       }
     });
+  });
+
+  it('reports unknown body fields at the body itself', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/memories',
+      headers: auth,
+      payload: {
+        type: 'feedback',
+        name: 'prefers-pnpm',
+        description: 'Use pnpm',
+        content: 'The team uses pnpm.',
+        embedding: [0.1],
+      },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({
+      errors: [expect.objectContaining({ path: 'body' })] as unknown,
+    });
+  });
+
+  it('logs unexpected failures for operators, and only those', async () => {
+    const lines: string[] = [];
+    const stream = { write: (line: string) => void lines.push(line) };
+    const logged = await buildApp({ db: database.db, apiKeys, logger: { level: 'error', stream } });
+    try {
+      // Client errors are the client's business: no error log.
+      await logged.inject({ method: 'GET', url: '/v1/memories/not-a-uuid', headers: auth });
+      await logged.inject({ method: 'GET', url: '/v1/nope' });
+      expect(lines).toEqual([]);
+
+      // An unexpected failure (unreachable database) is logged once, at error level.
+      const response = await logged.inject({
+        method: 'POST',
+        url: '/v1/memories',
+        headers: auth,
+        payload: { type: 'user', name: 'tz', description: 'Timezone', content: 'UTC.' },
+      });
+      expect(response.statusCode).toBe(500);
+      const entries = lines.map((line) => JSON.parse(line) as { level: number; err?: object });
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({ level: 50, err: expect.any(Object) as object });
+    } finally {
+      await logged.close();
+    }
   });
 
   it('rejects a non-UUID id before querying', async () => {

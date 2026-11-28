@@ -64,12 +64,18 @@ describe('parseBearerToken', () => {
     expect(parseBearerToken(header)).toBe(token);
   });
 
-  it.each([undefined, '', 'Bearer', 'Bearer ', 'Basic dXNlcjpwYXNz', 'Bearer a b', 'abc'])(
-    'returns null for %j',
-    (header) => {
-      expect(parseBearerToken(header)).toBeNull();
-    },
-  );
+  it.each([
+    undefined,
+    '',
+    'Bearer',
+    'Bearer ',
+    'Basic dXNlcjpwYXNz',
+    'Bearer a b',
+    'abc',
+    'xBearer abc',
+  ])('returns null for %j', (header) => {
+    expect(parseBearerToken(header)).toBeNull();
+  });
 });
 
 describe('apiKeyNameSchema', () => {

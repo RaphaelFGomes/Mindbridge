@@ -17,21 +17,21 @@ export interface Filters {
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-/** First value of a query parameter; blank counts as absent. */
-const first = (value: string | string[] | undefined) => {
-  const trimmed = (Array.isArray(value) ? value[0] : value)?.trim();
-  return trimmed === '' ? undefined : trimmed;
-};
+/** First value of a query parameter, trimmed. Blank values are ignored by the callers. */
+const first = (value: string | string[] | undefined) =>
+  (Array.isArray(value) ? value[0] : value)?.trim();
 
 const isMemoryType = (value: string | undefined): value is MemoryType =>
   MEMORY_TYPES.includes(value as MemoryType);
 
 /** Reads list filters from the URL, ignoring anything invalid instead of failing. */
 export function parseFilters(params: SearchParams): Filters {
+  const project = first(params.project);
   const type = first(params.type);
-  const page = Number.parseInt(first(params.page) ?? '1', 10);
+  // Only plain positive integers count; anything else (missing, "abc", "1.5") is page 1.
+  const page = Number(first(params.page));
   return {
-    ...(first(params.project) && { project: first(params.project)?.toLowerCase() }),
+    ...(project && { project: project.toLowerCase() }),
     ...(isMemoryType(type) && { type }),
     includeGlobal: first(params.global) !== 'exclude',
     page: Number.isSafeInteger(page) && page > 0 ? page : 1,

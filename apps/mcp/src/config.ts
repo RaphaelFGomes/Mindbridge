@@ -8,9 +8,8 @@ const envSchema = z.object({
     .url({ protocol: /^https?$/, error: 'must be an http(s) URL' })
     .default('http://127.0.0.1:4000'),
   // Same hint whether the key is missing (first setup) or malformed.
-  MINDBRIDGE_API_KEY: z
-    .string({ error: KEY_HINT })
-    .regex(/^mb_[A-Za-z0-9_-]{43}$/, { error: KEY_HINT }),
+  // In Zod 4 the schema-level error covers every issue (missing, wrong type, no match).
+  MINDBRIDGE_API_KEY: z.string({ error: KEY_HINT }).regex(/^mb_[A-Za-z0-9_-]{43}$/),
   /** Overrides the project detected from `git remote get-url origin`. */
   MINDBRIDGE_PROJECT: z
     .string()

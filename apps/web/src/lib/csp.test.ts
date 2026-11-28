@@ -12,6 +12,22 @@ const directives = (policy: string) =>
 describe('contentSecurityPolicy (production)', () => {
   const policy = directives(contentSecurityPolicy('abc123'));
 
+  it('is exactly this policy', () => {
+    expect(policy).toEqual({
+      'default-src': ["'self'"],
+      'script-src': ["'self'", "'nonce-abc123'", "'strict-dynamic'"],
+      'style-src': ["'self'", "'nonce-abc123'"],
+      'style-src-attr': ["'unsafe-inline'"],
+      'img-src': ["'self'", 'blob:', 'data:'],
+      'font-src': ["'self'"],
+      'connect-src': ["'self'"],
+      'object-src': ["'none'"],
+      'base-uri': ["'self'"],
+      'form-action': ["'self'"],
+      'frame-ancestors': ["'none'"],
+    });
+  });
+
   it('only runs scripts carrying the request nonce', () => {
     expect(policy['script-src']).toEqual(["'self'", "'nonce-abc123'", "'strict-dynamic'"]);
     expect(policy['style-src']).toEqual(["'self'", "'nonce-abc123'"]);

@@ -4,10 +4,6 @@
  */
 export function safeNextPath(next: unknown, fallback = '/memories'): string {
   if (typeof next !== 'string' || !next.startsWith('/') || next.startsWith('//')) return fallback;
-  let hasControlCharacter = false;
-  for (let index = 0; index < next.length; index++) {
-    if (next.charCodeAt(index) < 0x20) hasControlCharacter = true;
-  }
-  if (next.includes('\\') || hasControlCharacter) return fallback;
+  if (next.includes('\\') || /\p{Cc}/u.test(next)) return fallback;
   return next;
 }

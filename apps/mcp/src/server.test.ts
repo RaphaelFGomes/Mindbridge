@@ -1,6 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createApiClient, type Memory } from '@mindbridge/api-client';
 import { createServer } from './server.js';
@@ -99,6 +100,76 @@ describe('MCP server', () => {
     expect(client.getInstructions()).toMatch(/Never save secrets/);
   });
 
+  it('announces itself with the package version', async () => {
+    const client = await connect(PROJECT, fakeApi());
+    const { version } = JSON.parse(
+      readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+    ) as { version: string };
+    expect(client.getServerVersion()).toEqual({ name: 'mindbridge', version });
+  });
+
+  it('describes every tool and parameter, since assistants choose tools by reading them', async () => {
+    const client = await connect(PROJECT, fakeApi());
+    const { tools } = await client.listTools();
+
+    for (const tool of tools) {
+      expect(tool.title?.length, tool.name).toBeGreaterThan(5);
+      expect(tool.description?.length, tool.name).toBeGreaterThan(15);
+      const properties = (tool.inputSchema.properties ?? {}) as Record<
+        string,
+        { description?: string }
+      >;
+      for (const [name, property] of Object.entries(properties)) {
+        if (name !== 'scope')
+          expect(property.description?.length, `${tool.name}.${name}`).toBeGreaterThan(15);
+      }
+    }
+  });
+
+  it('declares honest behaviour hints for every tool', async () => {
+    const client = await connect(PROJECT, fakeApi());
+    const { tools } = await client.listTools();
+    const hints = Object.fromEntries(tools.map((tool) => [tool.name, tool.annotations]));
+
+    expect(hints).toEqual({
+      memory_index: { readOnlyHint: true, openWorldHint: false },
+      get_memory: { readOnlyHint: true, openWorldHint: false },
+      save_memory: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+      update_memory: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+      delete_memory: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    });
+  });
+
+  it('declares structured output for every tool that returns data', async () => {
+    const client = await connect(PROJECT, fakeApi());
+    const { tools } = await client.listTools();
+    const outputs = Object.fromEntries(
+      tools.map((tool) => [tool.name, Object.keys(tool.outputSchema?.properties ?? {}).sort()]),
+    );
+
+    expect(outputs).toEqual({
+      memory_index: ['memories', 'project'],
+      get_memory: ['memory'],
+      save_memory: ['memory'],
+      update_memory: ['memory'],
+      delete_memory: [],
+    });
+    const index = tools.find((tool) => tool.name === 'memory_index');
+    const entry = (index?.outputSchema?.properties?.memories as { items: { properties: object } })
+      .items.properties;
+    expect(Object.keys(entry).sort()).toEqual(['description', 'id', 'name', 'project', 'type']);
+  });
+
   describe('memory_index', () => {
     it('lists the project plus global memories, authenticated with the API key', async () => {
       const api = fakeApi(
@@ -150,6 +221,18 @@ describe('MCP server', () => {
       const result = await call(client, 'memory_index');
 
       expect(api.requests[0]?.url.searchParams.has('project')).toBe(false);
+      expect(result.structuredContent).toEqual({
+        project: null,
+        memories: [
+          {
+            id: 'g-1',
+            project: null,
+            type: 'feedback',
+            name: 'global-one',
+            description: 'Use pnpm, never npm',
+          },
+        ],
+      });
       expect(text(result)).toContain('No project detected');
       expect(text(result)).not.toContain('prefers-pnpm');
       expect(text(result)).toContain('global-one');
@@ -203,6 +286,16 @@ describe('MCP server', () => {
       expect(api.requests[0]?.body).toMatchObject({ project: null });
     });
 
+    it('still saves global memories when no project is detected', async () => {
+      const api = fakeApi(json(201, memory({ project: null })));
+      const client = await connect(null, api);
+
+      const result = await call(client, 'save_memory', { ...input, scope: 'global' });
+
+      expect(result.isError).toBeFalsy();
+      expect(api.requests[0]?.body).toMatchObject({ project: null });
+    });
+
     it('refuses a project memory when no project is detected, without calling the API', async () => {
       const api = fakeApi();
       const client = await connect(null, api);
@@ -232,7 +325,9 @@ describe('MCP server', () => {
       );
       const result = await call(client, 'save_memory', { ...input, name: 'Prefers PNPM' });
       expect(result.isError).toBe(true);
-      expect(text(result)).toContain('- body.name: must be kebab-case');
+      expect(text(result)).toBe(
+        'The request is invalid.\n- body.name: must be kebab-case (e.g. "prefers-pnpm")',
+      );
     });
   });
 
@@ -316,6 +411,16 @@ describe('MCP server', () => {
       expect(result.isError).toBe(true);
       expect(text(result)).toContain('bug in the client');
       expect(text(result)).not.toContain('MINDBRIDGE_API_KEY');
+    });
+
+    it.each([
+      [401, 'UNAUTHORIZED'],
+      [404, 'NOT_FOUND'],
+      [409, 'CONFLICT'],
+    ])('does not blame the API being down for a %i', async (status, code) => {
+      const client = await connect(PROJECT, fakeApi(problem(status, code, 'detail')));
+      const result = await call(client, 'memory_index');
+      expect(text(result)).not.toContain('Is the Mindbridge API running?');
     });
 
     it.each([503, 504])('hints that the API may be down on a %i from a gateway', async (status) => {

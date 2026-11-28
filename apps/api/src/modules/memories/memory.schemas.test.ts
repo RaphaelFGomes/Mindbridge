@@ -135,3 +135,34 @@ describe('toMemoryDto', () => {
     expect(dto.updatedAt).toBe('2026-01-02T03:04:05.678Z');
   });
 });
+
+describe('validation messages', () => {
+  const message = (result: { error?: { issues: { message: string }[] } }) =>
+    result.error?.issues.map((issue) => issue.message).join(' | ');
+  const body = (overrides: Record<string, unknown>) => ({
+    type: 'feedback',
+    name: 'prefers-pnpm',
+    description: 'Use pnpm',
+    content: 'The team uses pnpm.',
+    ...overrides,
+  });
+
+  it('explains each rule in plain words', () => {
+    expect(message(projectKeySchema.safeParse('Widgets'))).toBe(
+      'must be a normalized git remote (e.g. "github.com/acme/widgets")',
+    );
+    expect(message(memoryNameSchema.safeParse(''))).toContain('must not be blank');
+    expect(message(memoryNameSchema.safeParse('Not Kebab'))).toBe(
+      'must be kebab-case (e.g. "prefers-pnpm")',
+    );
+    expect(message(createMemoryBodySchema.safeParse(body({ description: '   ' })))).toBe(
+      'must not be blank',
+    );
+    expect(message(createMemoryBodySchema.safeParse(body({ content: 'a\u0000b' })))).toBe(
+      'must not contain NUL characters',
+    );
+    expect(message(updateMemoryBodySchema.safeParse({}))).toBe(
+      'at least one field must be provided',
+    );
+  });
+});

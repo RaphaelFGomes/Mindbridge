@@ -68,7 +68,7 @@ export function createApiClient({ baseUrl, apiKey, fetch }: ApiClientOptions) {
       );
     }
     const { data, error, response } = result;
-    if (error !== undefined || !response.ok) {
+    if (!response.ok) {
       const problem = (error ?? {}) as Problem;
       throw new MindbridgeApiError(
         response.status,

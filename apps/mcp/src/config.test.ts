@@ -29,7 +29,36 @@ describe('loadConfig', () => {
     expect(() => loadConfig(env)).toThrow(ConfigError);
   });
 
-  it('tells the user how to get a key', () => {
+  it('accepts http and https API URLs', () => {
+    for (const url of ['http://api.internal:4000', 'https://mindbridge.example']) {
+      expect(
+        loadConfig({ MINDBRIDGE_API_KEY: KEY, MINDBRIDGE_API_URL: url }).MINDBRIDGE_API_URL,
+      ).toBe(url);
+    }
+  });
+
+  it.each([
+    ['a scheme ending in http', 'xhttp://api'],
+    ['a scheme starting with http', 'httpx://api'],
+  ])('rejects %s', (_case, url) => {
+    expect(() => loadConfig({ MINDBRIDGE_API_KEY: KEY, MINDBRIDGE_API_URL: url })).toThrow(
+      /must be an http\(s\) URL/,
+    );
+  });
+
+  it.each([
+    ['extra characters before the key', `x${KEY}`],
+    ['extra characters after the key', `${KEY}x`],
+  ])('rejects %s', (_case, key) => {
+    expect(() => loadConfig({ MINDBRIDGE_API_KEY: key })).toThrow(/keys:create/);
+  });
+
+  it('tells the user how to get a key, whether it is missing or malformed', () => {
     expect(() => loadConfig({})).toThrow(/keys:create/);
+    expect(() => loadConfig({ MINDBRIDGE_API_KEY: 'sk-123' })).toThrow(/keys:create/);
+  });
+
+  it('names its errors', () => {
+    expect(() => loadConfig({})).toThrow(expect.objectContaining({ name: 'ConfigError' }) as Error);
   });
 });

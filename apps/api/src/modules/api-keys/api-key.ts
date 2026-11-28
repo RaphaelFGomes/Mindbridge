@@ -8,7 +8,8 @@ export const API_KEY_PREFIX = 'mb_';
 const API_KEY_PATTERN = /^mb_[A-Za-z0-9_-]{43}$/;
 const DISPLAY_PREFIX_LENGTH = 12;
 
-export const apiKeyNameSchema = slugSchema(64).describe('e.g. "claude-code", "copilot-laptop"');
+/** e.g. "claude-code", "copilot-laptop". */
+export const apiKeyNameSchema = slugSchema(64);
 
 export function generateApiKey(): string {
   return `${API_KEY_PREFIX}${randomBytes(32).toString('base64url')}`;
