@@ -1,0 +1,18 @@
+{
+  "name": "@mindbridge/performance",
+  "version": "0.0.0",
+  "private": true,
+  "description": "k6 performance tests for the REST API: smoke on every push; load, stress and soak on a schedule.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "smoke": "mkdir -p reports && k6 run scenarios/smoke.ts",
+    "load": "mkdir -p reports && k6 run scenarios/load.ts",
+    "stress": "mkdir -p reports && k6 run scenarios/stress.ts",
+    "soak": "mkdir -p reports && k6 run scenarios/soak.ts"
+  },
+  "devDependencies": {
+    "@types/k6": "^2.3.1"
+  }
+}

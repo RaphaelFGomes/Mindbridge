@@ -411,6 +411,12 @@ importers:
         specifier: 1.65.1
         version: 1.65.1
 
+  tests/performance:
+    devDependencies:
+      '@types/k6':
+        specifier: ^2.3.1
+        version: 2.3.1
+
 packages:
 
   '@alloc/quick-lru@5.3.0':
@@ -2771,6 +2777,9 @@ packages:
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
+
+  '@types/k6@2.3.1':
+    resolution: {integrity: sha512-3zbIAfQXvSDsA3ZaKC7+eczsvx1hGtL8o68iYEssOmTEmg0MuoCwZ45aAI3jDm0JtlhJZaQAszrie+M1xaqK7g==}
 
   '@types/node@18.19.130':
     resolution: {integrity: sha512-GRaXQx6jGfL8sKfaIDD6OupbIHBr9jv7Jnaml9tB7l4v068PAOXqfcujMMo5PhbIs6ggR1XODELqahT2R8v0fg==}
@@ -7266,6 +7275,8 @@ snapshots:
   '@types/jsesc@2.5.1': {}
 
   '@types/json-schema@7.0.15': {}
+
+  '@types/k6@2.3.1': {}
 
   '@types/node@18.19.130':
     dependencies:
