@@ -188,26 +188,27 @@ Errors use [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457)
 
 ## Testing
 
-| Type          | Tool                                                                                           | Status  |
-| ------------- | ---------------------------------------------------------------------------------------------- | ------- |
-| Unit          | Vitest (incl. HTTP-level tests via `app.inject`)                                               | ✅      |
-| Integration   | Vitest + Testcontainers (real Postgres, no DB mocks)                                           | ✅      |
-| API           | Playwright `request` + Schemathesis (OpenAPI-driven)                                           | ✅      |
-| Contract      | Pact (Web ↔ API, CLI ↔ API)                                                                    | Planned |
-| E2E           | Playwright: user flows, security checks, no-JavaScript fallbacks                               | ✅      |
-| Visual        | Playwright screenshots (desktop + mobile), browser in the official container                   | ✅      |
-| Accessibility | axe-core (WCAG 2.2 AA) on every page and state, keyboard checks                                | ✅      |
-| Performance   | k6 (load, stress, soak) with thresholds that fail CI                                           | Planned |
-| Security      | CodeQL, Semgrep, gitleaks, Trivy → Security tab; OWASP ZAP (web + API) against running servers | ✅      |
-| Mutation      | Stryker on every push: 100% mutation score on every package (unit tests)                       | ✅      |
-| MCP           | Vitest + in-memory MCP transport; stdio end-to-end in Playwright                               | ✅      |
-| AI evals      | promptfoo — does the AI retrieve the right memory via MCP?                                     | Planned |
+| Type          | Tool                                                                                            | Status  |
+| ------------- | ----------------------------------------------------------------------------------------------- | ------- |
+| Unit          | Vitest (incl. HTTP-level tests via `app.inject`)                                                | ✅      |
+| Integration   | Vitest + Testcontainers (real Postgres, no DB mocks)                                            | ✅      |
+| API           | Playwright `request` + Schemathesis (OpenAPI-driven)                                            | ✅      |
+| Contract      | Pact (Web ↔ API, CLI ↔ API)                                                                     | Planned |
+| E2E           | Playwright: user flows, security checks, no-JavaScript fallbacks                                | ✅      |
+| Visual        | Playwright screenshots (desktop + mobile), browser in the official container                    | ✅      |
+| Accessibility | axe-core (WCAG 2.2 AA) on every page and state, keyboard checks                                 | ✅      |
+| Performance   | k6: smoke on every push; load, stress and soak daily; latency and error thresholds fail the run | ✅      |
+| Security      | CodeQL, Semgrep, gitleaks, Trivy → Security tab; OWASP ZAP (web + API) against running servers  | ✅      |
+| Mutation      | Stryker on every push: 100% mutation score on every package (unit tests)                        | ✅      |
+| MCP           | Vitest + in-memory MCP transport; stdio end-to-end in Playwright                                | ✅      |
+| AI evals      | promptfoo — does the AI retrieve the right memory via MCP?                                      | Planned |
 
 ```bash
 pnpm test               # unit
 pnpm test:integration   # integration (needs Docker)
 pnpm test:coverage      # unit + integration with coverage (needs Docker)
 pnpm test:mutation      # Stryker: do the tests catch injected bugs? (about 3 minutes)
+pnpm --filter @mindbridge/performance smoke   # k6, 30 s against the running API (needs k6 + MINDBRIDGE_API_KEY)
 pnpm db:up && pnpm test:api   # black-box API tests against the built server
 pnpm db:up && pnpm test:e2e   # browser E2E + axe (first: pnpm --filter @mindbridge/e2e exec playwright install chromium)
 pnpm visual:browser && pnpm test:visual   # screenshots; add -- --update-snapshots after an intended UI change
@@ -229,6 +230,14 @@ comments). The gate lives in [`vitest.config.ts`](apps/api/vitest.config.ts): CI
 fails when coverage drops below its thresholds.
 
 CI also fails when the Drizzle schema changes without a matching migration.
+
+Performance tests ([`tests/performance`](tests/performance)) are k6 scripts in
+TypeScript. Every run seeds its own project, mixes reads (the MCP index, web UI
+pages, single memories) with full create, update and delete cycles, and cleans
+up afterwards. The 30-second smoke runs on every push; load (50 virtual users),
+stress (up to 300) and soak (30 minutes) run daily in the
+[Performance](.github/workflows/performance.yml) workflow. Each run fails when
+p95 latency (reads and writes separately) or the error rate goes over budget.
 
 ## Roadmap
 

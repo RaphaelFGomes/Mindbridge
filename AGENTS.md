@@ -107,6 +107,9 @@ tests/api/                Black-box API tests (Playwright `request`) + MCP over 
 tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScript project
   support/contract.ts     OpenAPI oracle: every response checked against /openapi.json
   fixtures.ts             per-test unique project key + auto-cleanup
+tests/performance/        k6 (TypeScript): smoke on push; load, stress, soak daily
+  lib/workload.ts         read/write mix, seeded per-run project, cleanup
+  lib/thresholds.ts       the latency and error budgets that fail the run
 ```
 
 | Command                                                                                             | What it does                                                                                                                                                                  |
@@ -122,6 +125,7 @@ tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScri
 | `pnpm test:e2e`                                                                                     | Browser E2E + accessibility (needs `pnpm db:up`; builds and starts API :4011 + web :3011)                                                                                     |
 | `pnpm visual:browser` then `pnpm test:visual`                                                       | Visual snapshots; the browser runs in the official Playwright container (`-- --update-snapshots` to accept an intended change, then commit `tests/e2e/specs/__screenshots__`) |
 | `pnpm test:mutation`                                                                                | Stryker on the unit tests of every package; reports in `*/reports/mutation/`                                                                                                  |
+| `pnpm --filter @mindbridge/performance smoke` (or `load`, `stress`, `soak`)                         | k6 against the API on `API_URL` (default :4000); needs `k6` and `MINDBRIDGE_API_KEY` exported; reports in `tests/performance/reports/`                                        |
 | `pnpm keys:create --name <n>` / `keys:list` / `keys:revoke <n>`                                     | Manage API keys (plaintext shown once)                                                                                                                                        |
 | `pnpm lint` / `pnpm typecheck` / `pnpm format:check`                                                | Static checks                                                                                                                                                                 |
 | `pnpm --filter @mindbridge/api db:generate`                                                         | New migration after a schema change                                                                                                                                           |
@@ -223,6 +227,19 @@ tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScri
   The API mutates only what unit tests reach (database code is covered by
   integration tests). Incremental mode is off: it kept stale results. Plugins
   are listed explicitly because pnpm hides them from Stryker's discovery.
+- **Performance (k6):** TypeScript run natively by k6 (imports keep `.ts`;
+  `@types/k6` for typecheck, no bundler, no remote `jslib.k6.io` imports).
+  Each run seeds its own project (`github.com/k6/run-<ms>`) in `setup()` and
+  deletes it in `teardown()`; write iterations create, update and delete, so
+  a soak doesn't grow the database. Requests are tagged `op:read`,
+  `op:write` or `op:setup` (seeding, kept out of the latency budgets) and
+  `name` (one metric per endpoint, not per id). Thresholds live in
+  `lib/thresholds.ts`: steady (smoke, load, soak) and stress. Smoke runs in
+  the CI `api` job; `performance.yml` runs load (50 VUs), stress (to 300 VUs)
+  and soak (30 VUs, 30 min) daily, each with its own Postgres and API
+  (`NODE_ENV=production`, `LOG_LEVEL=warn`). Summaries go to the job summary.
+  The owner runs k6 only in CI: never suggest installing it on their machine.
+  Locally, `pnpm typecheck` and `pnpm lint` cover the scripts (`@types/k6`).
 - **Coverage:** the gate is `coverage.thresholds` in `apps/api/vitest.config.ts`
   (unit + integration combined). Codecov is reporting only: uploaded via OIDC
   (no token secret), `comment: false`, informational statuses. Raise the
@@ -283,8 +300,9 @@ tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScri
   message on blank names, filter alignment and mobile header wrapping.
 - **v0.4 decisions:** security findings go to the GitHub Security tab
   (SARIF), never PR comments or issues. Heavy jobs: fast variants on every push
-  (k6 smoke ~30 s, incremental Stryker), full ones (stress, soak, full
-  mutation) on a daily schedule + manual dispatch.
+  (k6 smoke ~30 s), full ones (load, stress, soak) on a daily schedule +
+  manual dispatch. Stryker ended up running in full on every push
+  (incremental mode kept stale results).
 - 2026-11-27: v0.4 increment 4a — static security pipeline (CodeQL, Semgrep,
   gitleaks, Trivy).
 - 2026-11-27: v0.4 increment 4b — OWASP ZAP (web baseline + API active
@@ -300,9 +318,14 @@ tests/e2e/                Browser E2E (Playwright): flows, axe-core, no-JavaScri
   line coverage; now 100% everywhere after new tests (tool contracts, regex
   boundaries, error mapping, log behaviour, OpenAPI = committed file) and
   simplifying redundant code the survivors exposed.
+- 2026-11-28: v0.4 increment 4d — k6 performance tests: smoke in CI (every
+  push), load/stress/soak in `performance.yml` (daily + manual). Starting
+  thresholds are generous placeholders.
 - **Next steps (v0.4):**
-  1. Push; confirm the Mutation workflow is green.
-  2. k6: smoke on push; load, stress and soak on schedule.
+  1. Push; check the k6 smoke in CI (its first real run), then dispatch
+     Performance (`all`).
+  2. Calibrate `lib/thresholds.ts` from those numbers (tight budgets with
+     headroom for runner noise), then close v0.4.
 
 ## Working rules
 
