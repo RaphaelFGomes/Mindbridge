@@ -43,3 +43,6 @@ pnpm-debug.log*
 
 # Security scan reports
 *.sarif
+
+# Stryker sandboxes
+.stryker-tmp/

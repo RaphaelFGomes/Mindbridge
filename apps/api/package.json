@@ -17,7 +17,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env --import tsx src/scripts/migrate.ts",
     "keys": "node --env-file-if-exists=.env --import tsx src/scripts/keys.ts",
-    "openapi:export": "node --import tsx src/scripts/export-openapi.ts"
+    "openapi:export": "node --import tsx src/scripts/export-openapi.ts",
+    "test:mutation": "stryker run"
   },
   "dependencies": {
     "@fastify/swagger": "^9.9.5",
@@ -30,6 +31,9 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "10.1.1",
+    "@stryker-mutator/typescript-checker": "10.1.1",
+    "@stryker-mutator/vitest-runner": "10.1.1",
     "@testcontainers/postgresql": "^12.2.2",
     "@vitest/coverage-v8": "5.1.1",
     "drizzle-kit": "^0.31.11",

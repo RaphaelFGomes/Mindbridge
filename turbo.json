@@ -51,6 +51,11 @@
       "dependsOn": ["@mindbridge/api#build", "@mindbridge/web#build"],
       "cache": false,
       "passThroughEnv": ["DATABASE_URL", "CI", "E2E_*", "PW_*"]
+    },
+    "test:mutation": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "outputs": ["reports/mutation/**"]
     }
   }
 }
